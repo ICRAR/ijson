@@ -1,0 +1,18 @@
+root = true
+
+[*]
+charset = utf-8
+indent_size = 4
+insert_final_newline = true
+end_of_line = lf
+indent_style = tab
+
+[*.py]
+indent_style = space
+
+[{setup.cfg, .coveragerc}]
+indent_style = space
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2

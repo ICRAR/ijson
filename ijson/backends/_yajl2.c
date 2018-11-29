@@ -184,15 +184,15 @@ static yajl_callbacks callbacks = {
  * basic_parse generator object structure
  */
 typedef struct {
-    PyObject_HEAD
-    yajl_handle h;
-    void *ctx;
-    PyObject *JSONError;
-    PyObject *IncompleteJSONError;
-    PyObject *read;
-    Py_ssize_t buf_size;
-    Py_ssize_t pos;
-    int finished;
+	PyObject_HEAD
+	yajl_handle h;
+	void *ctx;
+	PyObject *JSONError;
+	PyObject *IncompleteJSONError;
+	PyObject *read;
+	Py_ssize_t buf_size;
+	Py_ssize_t pos;
+	int finished;
 } BasicParseGen;
 
 
@@ -216,16 +216,16 @@ static int basicparse_init(BasicParseGen *self, PyObject *args, PyObject *kwargs
 	self->finished = 0;
 
 	char *kwlist[] = {"read", "decimal", "jsonerror", "incompletejsonerror",
-	                  "buf_size", "allow_comments", "multiple_values",
-	                  NULL};
+					  "buf_size", "allow_comments", "multiple_values",
+					  NULL};
 	if( !PyArg_ParseTupleAndKeywords(args, kwargs, "OOOO|nOO", kwlist,
-	                                 &read,
-	                                 &decimal,
-	                                 &(self->JSONError),
-	                                 &(self->IncompleteJSONError),
-	                                 &buf_size,
-	                                 &allow_comments,
-	                                 &multiple_values) ) {
+									 &read,
+									 &decimal,
+									 &(self->JSONError),
+									 &(self->IncompleteJSONError),
+									 &buf_size,
+									 &allow_comments,
+									 &multiple_values) ) {
 		return -1;
 	}
 
@@ -423,8 +423,8 @@ static PyTypeObject BasicParseGen_Type = {
  * parse generator object structure
  */
 typedef struct {
-    BasicParseGen basic_parse;
-    PyObject *path;
+	BasicParseGen basic_parse;
+	PyObject *path;
 } ParseGen;
 
 
@@ -725,10 +725,10 @@ int builder_event(builder_t *builder, PyObject *ename, PyObject *value) {
  * parse generator object structure
  */
 typedef struct {
-    ParseGen parse;
-    builder_t *builder;
-    PyObject *prefix;
-    PyObject *end_event;
+	ParseGen parse;
+	builder_t *builder;
+	PyObject *prefix;
+	PyObject *end_event;
 } ItemsGen;
 
 
@@ -940,3 +940,4 @@ MOD_INIT(_yajl2)
 	return MOD_VAL(m);
 
 }
+
