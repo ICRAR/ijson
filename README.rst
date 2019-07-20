@@ -8,7 +8,7 @@
 ijson
 =====
 
-Ijson is an iterative JSON parser with a standard Python iterator interface.
+Ijson is an iterative JSON parser with a standard Python iterator interface. 
 
 
 Usage
