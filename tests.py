@@ -142,6 +142,31 @@ STRINGS_JSON = br'''
 '''
 NUMBERS_JSON = b'[1, 1.0, 1E2]'
 SURROGATE_PAIRS_JSON = br'"\uD83D\uDCA9"'
+PARTIAL_JSONS = [
+    ('[1,', 1),
+    ('[1, 2 ', 2),
+    ('[1, "abc"', 2),
+    ('[{"abc": [0, 1]}', 1),
+    ('[{"abc": [0, 1]},', 1),
+]
+
+
+class ErroringFile(object):
+    '''
+    Helper class that emulates a file object but errors when read after
+    exhaustion, for testing greediness of lexers.
+    '''
+    def __init__(self, raw_value):
+        self.raw_value = raw_value
+
+    def read(self, chunk=-1):
+        if not chunk:
+            return ''
+        val = self.raw_value
+        if not val:
+            raise ValueError
+        self.raw_value = ''
+        return val
 
 
 class Parse(object):
@@ -255,6 +280,15 @@ class Parse(object):
         if self.warn_on_string_stream:
             self.assertEqual(len(warns), 1)
             self.assertEqual(DeprecationWarning, warns[0].category)
+
+    def test_lexer_greediness(self):
+        for json, safe_iterations in PARTIAL_JSONS:
+            iterable = self.backend.items(ErroringFile(json), 'item')
+            for iteration in range(safe_iterations):
+                try:
+                    next(iterable)
+                except ValueError:
+                    self.fail('Only iterated %s times for %r' % (iteration, json))
 
 # Generating real TestCase classes for each importable backend
 for name in ['python', 'yajl', 'yajl2', 'yajl2_cffi', 'yajl2_c']:
