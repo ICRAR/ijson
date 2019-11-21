@@ -52,11 +52,8 @@ def Lexer(f, buf_size=BUFSIZE):
                         buf += data
                 yield discarded + pos, buf[pos:end + 1]
                 pos = end + 1
-            elif lexeme in UNARY_LEXEMES:
-                yield discarded + pos, lexeme
-                pos += 1
             else:
-                while match.end() == len(buf):
+                while lexeme not in UNARY_LEXEMES and match.end() == len(buf):
                     data = f.read(buf_size)
                     if not data:
                         break
