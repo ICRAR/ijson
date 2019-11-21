@@ -12,6 +12,7 @@ from ijson.compat import bytetype
 
 BUFSIZE = 16 * 1024
 LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|\S')
+UNARY_LEXEMES = set('[]{},')
 
 
 class UnexpectedSymbol(common.JSONError):
@@ -51,7 +52,7 @@ def Lexer(f, buf_size=BUFSIZE):
                         buf += data
                 yield discarded + pos, buf[pos:end + 1]
                 pos = end + 1
-            elif lexeme in {']', '}', ','}:
+            elif lexeme in UNARY_LEXEMES:
                 yield discarded + pos, lexeme
                 pos += 1
             else:
