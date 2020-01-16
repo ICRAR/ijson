@@ -6,33 +6,14 @@ import tempfile
 
 from setuptools import setup, find_packages, Extension
 
-def get_ijson_version():
-    """Get version from code without fully importing it"""
-    _globals = {}
-    with open(os.path.join('ijson', 'version.py')) as f:
-        code = f.read()
-    exec(code, _globals)
-    return _globals['__version__']
+from pathlib import Path
+thisDir = Path(__file__).parent.absolute()
 
-setupArgs = dict(
-    name = 'ijson',
-    version = get_ijson_version(),
-    author = 'Rodrigo Tobar, Ivan Sagalaev',
-    author_email = 'rtobar@icrar.org, maniac@softwaremaniacs.org',
-    url = 'https://github.com/ICRAR/ijson',
-    license = 'BSD',
-    description = 'Iterative JSON parser with a standard Python iterator interface',
-    long_description = open('README.rst').read(),
-
-    classifiers = [
-        'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    packages = find_packages(),
-)
+setupArgs = {"use_scm_version": {
+        "write_to": thisDir / "ijson" / "version.py",
+        "write_to_template": 'version = "{version}"\n',
+    }
+}
 
 # Check if the yajl library + headers are present
 # We don't use compiler.has_function because it leaves a lot of files behind
