@@ -179,9 +179,10 @@ def number(str_value):
     Converts string with a numeric value into an int or a Decimal.
     Used in different backends for consistent number representation.
     '''
-    if not ('.' in str_value or 'e' in str_value or 'E' in str_value):
-        return int(str_value)
-    return decimal.Decimal(str_value)
+    for character in str_value:
+        if character == '.' or character == 'e' or character == 'E':
+            return decimal.Decimal(str_value)
+    return int(str_value)
 
 
 def file_source(f, use_string_reader, buf_size=64*1024):
