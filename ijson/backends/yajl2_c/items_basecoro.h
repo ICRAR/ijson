@@ -21,7 +21,7 @@ typedef struct {
     PyObject *target_send;
     builder_t *builder;
     PyObject *prefix;
-    PyObject *end_event;
+    int object_depth;
 } ItemsBasecoro;
 
 /**

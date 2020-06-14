@@ -1,8 +1,8 @@
 '''
 Pure-python parsing backend.
 '''
-import re
 from json.decoder import scanstring
+import re
 
 from ijson import common, utils
 from ijson.constants import END_ARRAY, END_MAP, MAP_KEY, START_ARRAY, START_MAP
@@ -101,9 +101,11 @@ _PARSE_ARRAY_ELEMENT_END = 1
 _PARSE_OBJECT_KEY = 2
 _PARSE_OBJECT_END = 3
 
+# infinity singleton for overflow checks
+inf = float("inf")
 
 @utils.coroutine
-def parse_value(target, multivalue):
+def parse_value(target, multivalue, use_float):
     """
     Parses results coming out of the Lexer into ijson events, which are sent to
     `target`. A stack keeps track of the type of object being parsed at the time
@@ -122,6 +124,7 @@ def parse_value(target, multivalue):
     push = state_stack.append
     send = target.send
     prev_pos, prev_symbol = None, None
+    to_number = common.integer_or_float if use_float else common.integer_or_decimal
     while True:
 
         if prev_pos is None:
@@ -188,7 +191,9 @@ def parse_value(target, multivalue):
             # A number
             else:
                 try:
-                    number = common.number(symbol)
+                    number = to_number(symbol)
+                    if number == inf:
+                        raise common.JSONError("float overflow: %s" % (symbol,))
                 except:
                     raise UnexpectedSymbol(symbol, pos)
                 else:
@@ -235,7 +240,8 @@ def parse_string(symbol):
     return scanstring(symbol, 1)[0]
 
 
-def basic_parse_basecoro(target, multiple_values=False, allow_comments=False):
+def basic_parse_basecoro(target, multiple_values=False, allow_comments=False,
+                         use_float=False):
     '''
     Iterator yielding unprefixed events.
 
@@ -245,7 +251,7 @@ def basic_parse_basecoro(target, multiple_values=False, allow_comments=False):
     '''
     if allow_comments:
         raise ValueError("Comments are not supported by the python backend")
-    return Lexer(parse_value(target, multiple_values))
+    return Lexer(parse_value(target, multiple_values, use_float))
 
 
 common.enrich_backend(globals(), use_string_reader=True)

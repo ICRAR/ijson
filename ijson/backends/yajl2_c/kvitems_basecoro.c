@@ -41,41 +41,49 @@ static void kvitems_basecoro_dealloc(KVItemsBasecoro *self)
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
+static int kvitems_basecoro_start_new_member(KVItemsBasecoro *coro, PyObject *key)
+{
+	coro->object_depth = 0;
+	Py_XDECREF(coro->key);
+	coro->key = key;
+	Py_INCREF(coro->key);
+	M1_M1(builder_reset(coro->builder));
+	coro->builder->active = 1;
+	return 0;
+}
+
 PyObject* kvitems_basecoro_send_impl(PyObject *self, PyObject *path, PyObject *event, PyObject *value)
 {
 	KVItemsBasecoro *coro = (KVItemsBasecoro *)self;
 
 	PyObject *retval = NULL;
 	PyObject *retkey = NULL;
-	int cmp = PyObject_RichCompareBool(path, coro->prefix, Py_EQ);
-	N_M1(cmp);
 	if (builder_isactive(coro->builder)) {
-		if (cmp == 0) {
+		coro->object_depth += (event == enames.start_map_ename);
+		coro->object_depth -= (event == enames.end_map_ename);
+		if ((event != enames.map_key_ename || coro->object_depth != 0) &&
+		    (event != enames.end_map_ename || coro->object_depth != -1)) {
 			N_M1(builder_event(coro->builder, event, value));
 		}
 		else {
 			retval = builder_value(coro->builder);
 			retkey = coro->key;
 			Py_INCREF(retkey);
-			Py_DECREF(coro->key);
 			if (event == enames.map_key_ename) {
-				coro->key = value;
-				Py_INCREF(coro->key);
-				N_M1(builder_reset(coro->builder));
-				coro->builder->active = 1;
+				N_M1(kvitems_basecoro_start_new_member(coro, value));
 			}
 			else {
-				coro->key = NULL;
+				Py_CLEAR(coro->key);
 				coro->builder->active = 0;
 			}
 		}
 	}
-	else if (cmp == 1 && event == enames.map_key_ename) {
-		Py_XDECREF(coro->key);
-		coro->key = value;
-		Py_INCREF(coro->key);
-		N_M1(builder_reset(coro->builder));
-		coro->builder->active = 1;
+	else {
+		int cmp = PyObject_RichCompareBool(path, coro->prefix, Py_EQ);
+		N_M1(cmp);
+		if (cmp == 1 && event == enames.map_key_ename) {
+			N_M1(kvitems_basecoro_start_new_member(coro, value));
+		}
 	}
 
 	if (retval) {

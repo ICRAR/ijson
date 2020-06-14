@@ -156,6 +156,7 @@ def run_benchmarks(args, benchmark_func=None, fname=None):
             method_args = args.prefix,
         method_kwargs = {
             'multiple_values': args.multiple_values,
+            'use_float': args.use_float
         }
         if not args.run_coro:
             method_kwargs['buf_size'] = args.bufsize
@@ -230,6 +231,8 @@ def main():
         help='File to use for benchmarks rather than built-in benchmarking functions')
     parser.add_argument('-m', '--multiple-values', action='store_true', default=False,
         help='Content has multiple JSON values, useful when used with -i')
+    parser.add_argument('-f', '--use-float', action='store_true', default=False,
+        help='Parse non-integer numbers as float instead of Decimal')
     parser.add_argument('-M', '--method', choices=['basic_parse', 'parse', 'kvitems', 'items'],
                         help='The method to benchmark', default='basic_parse')
     parser.add_argument('-c', '--coro', action='store_true', default=False,

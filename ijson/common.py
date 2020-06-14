@@ -2,6 +2,7 @@
 Backend independent higher level interfaces, common exceptions.
 '''
 import decimal
+import warnings
 
 from ijson import compat, utils
 from ijson.constants import END_ARRAY, END_MAP, MAP_KEY, START_ARRAY, START_MAP
@@ -147,11 +148,15 @@ def items_basecoro(target, prefix, map_type=None):
         current, event, value = (yield)
         if current == prefix:
             if event in (START_MAP, START_ARRAY):
+                object_depth = 1
                 builder = ObjectBuilder(map_type=map_type)
-                end_event = event.replace('start', 'end')
-                while (current, event) != (prefix, end_event):
+                while object_depth:
                     builder.event(event, value)
                     current, event, value = (yield)
+                    if event in ('start_map', 'start_array'):
+                        object_depth += 1
+                    elif event in ('end_map', 'end_array'):
+                        object_depth -= 1
                 del builder.containers[:]
                 target.send(builder.value)
             else:
@@ -167,17 +172,26 @@ def kvitems_basecoro(target, prefix, map_type=None):
     while True:
         path, event, value = (yield)
         while path == prefix and event == MAP_KEY:
+            object_depth = 0
             key = value
             builder = ObjectBuilder(map_type=map_type)
             path, event, value = (yield)
-            while path != prefix:
+            if event == 'start_map':
+                object_depth += 1
+            while (
+                (event != 'map_key' or object_depth != 0) and
+                (event != 'end_map' or object_depth != -1)):
                 builder.event(event, value)
                 path, event, value = (yield)
+                if event == 'start_map':
+                    object_depth += 1
+                elif event == 'end_map':
+                    object_depth -= 1
             del builder.containers[:]
             target.send((key, builder.value))
 
 
-def number(str_value):
+def integer_or_decimal(str_value):
     '''
     Converts string with a numeric value into an int or a Decimal.
     Used in different backends for consistent number representation.
@@ -186,6 +200,18 @@ def number(str_value):
         return int(str_value)
     return decimal.Decimal(str_value)
 
+def integer_or_float(str_value):
+    '''
+    Converts string with a numeric value into an int or a float.
+    Used in different backends for consistent number representation.
+    '''
+    if not ('.' in str_value or 'e' in str_value or 'E' in str_value):
+        return int(str_value)
+    return float(str_value)
+
+def number(str_value):
+    warnings.warn("number() function will be removed in a later release", DeprecationWarning)
+    return integer_or_decimal(str_value)
 
 def file_source(f, use_string_reader, buf_size=64*1024):
     '''A generator that yields data from a file-like object'''

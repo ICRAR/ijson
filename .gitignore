@@ -10,3 +10,5 @@ dist
 .project
 .pydevproject
 .settings
+.cproject
+.autotools

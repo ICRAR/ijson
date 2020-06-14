@@ -19,7 +19,7 @@ static int items_basecoro_init(ItemsBasecoro *self, PyObject *args, PyObject *kw
 	self->target_send = NULL;
 	self->builder = NULL;
 	self->prefix = NULL;
-	self->end_event = NULL;
+	self->object_depth = 0;
 
 	PyObject *map_type;
 	M1_Z(PyArg_ParseTuple(args, "OOO", &(self->target_send), &(self->prefix), &map_type));
@@ -45,9 +45,9 @@ PyObject* items_basecoro_send_impl(PyObject *self, PyObject *path, PyObject *eve
 	ItemsBasecoro *coro = (ItemsBasecoro *)self;
 
 	if (builder_isactive(coro->builder)) {
-		int cmp = PyObject_RichCompareBool(path, coro->prefix, Py_EQ);
-		N_M1(cmp);
-		if (event != coro->end_event || cmp == 0) {
+		coro->object_depth += (event == enames.start_map_ename || event == enames.start_array_ename);
+		coro->object_depth -= (event == enames.end_map_ename || event == enames.end_array_ename);
+		if (coro->object_depth > 0) {
 			N_M1( builder_event(coro->builder, event, value) );
 		}
 		else {
@@ -62,7 +62,7 @@ PyObject* items_basecoro_send_impl(PyObject *self, PyObject *path, PyObject *eve
 		N_M1(cmp);
 		if (cmp) {
 			if (event == enames.start_map_ename || event == enames.start_array_ename) {
-				coro->end_event = (event == enames.start_array_ename) ? enames.end_array_ename : enames.end_map_ename;
+				coro->object_depth = 1;
 				N_M1(builder_event(coro->builder, event, value));
 			}
 			else {

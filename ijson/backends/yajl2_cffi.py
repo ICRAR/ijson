@@ -97,10 +97,22 @@ def boolean(val):
     return bool(val)
 
 
+@ffi.callback('int(void *ctx, long long integerVal)')
+@append_event_to_ctx('number')
+def integer(val):
+    return val
+
+
+@ffi.callback('int(void * ctx, double doubleVal)')
+@append_event_to_ctx('number')
+def double(val):
+    return val
+
+
 @ffi.callback('int(void *ctx, const char *numberVal, size_t numberLen)')
 @append_event_to_ctx('number')
 def number(val, length):
-    return common.number(b2s(ffi.string(val, maxlen=length)))
+    return common.integer_or_decimal(b2s(ffi.string(val, maxlen=length)))
 
 
 @ffi.callback('int(void *ctx, const unsigned char *stringVal, size_t stringLen)')
@@ -139,17 +151,23 @@ def end_array():
     return None
 
 
-_callback_data = (
-    # For more information about callbacks,
-    # take a look at the ctypes backend
+_decimal_callback_data = (
     null, boolean, ffi.NULL, ffi.NULL, number, string,
     start_map, map_key, end_map, start_array, end_array
 )
 
+_float_callback_data = (
+    null, boolean, integer, double, ffi.NULL, string,
+    start_map, map_key, end_map, start_array, end_array
+)
 
-def yajl_init(scope, send, allow_comments=False, multiple_values=False):
+
+def yajl_init(scope, send, allow_comments=False, multiple_values=False, use_float=False):
     scope.ctx = ffi.new_handle(send)
-    scope.callbacks = ffi.new('yajl_callbacks*', _callback_data)
+    if use_float:
+        scope.callbacks = ffi.new('yajl_callbacks*', _float_callback_data)
+    else:
+        scope.callbacks = ffi.new('yajl_callbacks*', _decimal_callback_data)
     handle = yajl.yajl_alloc(scope.callbacks, ffi.NULL, scope.ctx)
 
     if allow_comments:

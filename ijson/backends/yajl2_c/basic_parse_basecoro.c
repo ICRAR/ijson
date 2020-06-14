@@ -47,6 +47,28 @@ static int boolean(void * ctx, int val) {
 	return add_event_and_value(ctx, enames.boolean_ename, bval);
 }
 
+static int yajl_integer(void *ctx, long long val)
+{
+	PyObject *ival;
+#if PY_MAJOR_VERSION < 3
+	if (val <= 0xFFFFFFFF) {
+		Z_N(ival = PyInt_FromLong((long)val));
+	}
+	else
+#endif
+	{
+		Z_N(ival = PyLong_FromLongLong(val))
+	}
+	return add_event_and_value(ctx, enames.number_ename, ival);
+}
+
+static int yajl_double(void *ctx, double val)
+{
+	PyObject *dval;
+	Z_N(dval = PyFloat_FromDouble(val))
+	return add_event_and_value(ctx, enames.number_ename, dval);
+}
+
 static int number(void * ctx, const char *numberVal, size_t numberLen) {
 
 	// If original string has a dot or an "e/E" we return a Decimal
@@ -117,8 +139,13 @@ static int end_array(void *ctx) {
 	return add_event_and_value(ctx, enames.end_array_ename, Py_None);
 }
 
-static yajl_callbacks callbacks = {
+static yajl_callbacks decimal_callbacks = {
 	null, boolean, NULL, NULL, number, string_cb,
+	start_map, map_key, end_map, start_array, end_array
+};
+
+static yajl_callbacks float_callbacks = {
+	null, boolean, yajl_integer, yajl_double, NULL, string_cb,
 	start_map, map_key, end_map, start_array, end_array
 };
 
@@ -153,14 +180,16 @@ static int basic_parse_basecoro_init(BasicParseBasecoro *self, PyObject *args, P
 {
 	PyObject *allow_comments = Py_False;
 	PyObject *multiple_values = Py_False;
+	PyObject *use_float = Py_False;
 
 	self->h = NULL;
 	self->target_send = NULL;
 
-	char *kwlist[] = {"target_send", "allow_comments", "multiple_values", NULL};
-	if( !PyArg_ParseTupleAndKeywords(args, kwargs, "O|OO", kwlist,
+	char *kwlist[] = {"target_send", "allow_comments", "multiple_values",
+	                  "use_float", NULL};
+	if( !PyArg_ParseTupleAndKeywords(args, kwargs, "O|OOO", kwlist,
 	                                 &self->target_send, &allow_comments,
-	                                 &multiple_values) ) {
+	                                 &multiple_values, &use_float) ) {
 		return -1;
 	}
 	Py_INCREF(self->target_send);
@@ -170,7 +199,14 @@ static int basic_parse_basecoro_init(BasicParseBasecoro *self, PyObject *args, P
 	 * The context given to yajl is the coroutine's target, so the callbacks
 	 * directly send values to the target
 	 */
-	M1_N(self->h = yajl_alloc(&callbacks, NULL, (void *)self->target_send));
+	yajl_callbacks *callbacks;
+	if (PyObject_IsTrue(use_float)) {
+		callbacks = &float_callbacks;
+	}
+	else {
+		callbacks = &decimal_callbacks;
+	}
+	M1_N(self->h = yajl_alloc(callbacks, NULL, (void *)self->target_send));
 	if (PyObject_IsTrue(allow_comments)) {
 		yajl_config(self->h, yajl_allow_comments, 1);
 	}

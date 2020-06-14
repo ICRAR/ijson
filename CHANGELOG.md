@@ -1,5 +1,34 @@
 # Changelog
 
+## Development version
+
+* A new ``use_float`` option has been added to all backends
+  to control whether ``float`` values should be returned
+  for non-integer numbers instead of ``Decimal`` objects.
+  Using this option trades loss of precision
+  (which most applications probably don't care)
+  for performance (which most application do care about).
+  Historically ijson has returned ``Decimal`` objects,
+  and therefore the option defaults to ``False``
+  for backwards compatibility,
+  but in later releases this default could change to ``True``.
+* ``ijson.common.number`` is marked as deprecated,
+  and will be removed on some later release.
+
+## [3.0.4]
+
+* Fixed errors triggered by JSON documents
+  where the top-level value is an object containing
+  an empty-named member (e.g., ``{"": 1}``).
+  Although such documents are valid JSON,
+  they broke basic assumptions made
+  by the ``kvitems`` and ``items`` functions
+  (and all their variants)
+  in all backends,
+  producing different types of unexpected failures,
+  including segmentation faults, raising unexpected exceptions,
+  and producing wrong results.
+
 ## [3.0.3]
 
 * Fixed segmentation fault in ``yajl2_c`` backend's ``parse``
@@ -148,3 +177,4 @@
 [3.0.1]: https://github.com/ICRAR/ijson/releases/tag/v3.0.1
 [3.0.2]: https://github.com/ICRAR/ijson/releases/tag/v3.0.2
 [3.0.3]: https://github.com/ICRAR/ijson/releases/tag/v3.0.3
+[3.0.4]: https://github.com/ICRAR/ijson/releases/tag/v3.0.4

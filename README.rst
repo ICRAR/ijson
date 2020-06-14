@@ -226,6 +226,18 @@ Options
 Additional options are supported by **all** ijson functions
 to give users more fine-grained control over certain operations:
 
+- The ``use_float`` option (defaults to ``False``)
+  controls how non-integer values are returned to the user.
+  If set to ``True`` users receive ``float()`` values;
+  otherwise ``Decimal`` values are constructed.
+  Note that building ``float`` values is usually faster,
+  but on the other hand there might be loss of precision
+  (which most applications will not care about)
+  and will raise an exception when overflow occurs
+  (e.g., if ``1e400`` is encountered).
+  Future versions of ijson
+  might change the default value of this option
+  to ``True``.
 - The ``multiple_values`` option (defaults to ``False``)
   controls whether multiple top-level values are supported.
   JSON content should contain a single top-level value
@@ -354,8 +366,9 @@ FAQ
    **A**: ijson returns ``int`` values for integers
    and ``decimal.Decimal`` values for floating-point numbers.
    This is mostly because of historical reasons.
-   In the future an option might be added
-   to use a different type (e.g., ``float``).
+   Since 3.1 a new ``use_float`` option (defaults to ``False``)
+   is available to return ``float`` values instead.
+   See the options_ section for details.
 
 #. **Q**: I'm getting an ``UnicodeDecodeError``, or an ``IncompleteJSONError`` with no message
 

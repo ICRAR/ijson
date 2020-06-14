@@ -25,6 +25,7 @@ typedef struct {
     builder_t *builder;
     PyObject *prefix;
     PyObject *key;
+    int object_depth;
 } KVItemsBasecoro;
 
 /**

@@ -2,51 +2,13 @@
 Wrapper for YAJL C library version 2.x.
 '''
 
-from ctypes import Structure, c_uint, c_ubyte, c_int, c_long, c_double, c_char, \
-                   c_void_p, c_char_p, CFUNCTYPE, POINTER, byref, string_at, cast
+from ctypes import byref
 
-from ijson import common, backends, utils
-from ijson.compat import b2s
-
-
-yajl = backends.find_yajl_ctypes(2)
-
-yajl.yajl_alloc.restype = POINTER(c_char)
-yajl.yajl_get_error.restype = POINTER(c_char)
-
-C_EMPTY = CFUNCTYPE(c_int, c_void_p)
-C_INT = CFUNCTYPE(c_int, c_void_p, c_int)
-C_LONG = CFUNCTYPE(c_int, c_void_p, c_long)
-C_DOUBLE = CFUNCTYPE(c_int, c_void_p, c_double)
-C_STR = CFUNCTYPE(c_int, c_void_p, POINTER(c_ubyte), c_uint)
+from ijson import common, utils
+from ijson.backends import _yajl2_ctypes_common
 
 
-_callback_data = [
-    # Mapping of JSON parser events to callback C types and value converters.
-    # Used to define the Callbacks structure and actual callback functions
-    # inside the parse function.
-    ('null', C_EMPTY, lambda: None),
-    ('boolean', C_INT, lambda v: bool(v)),
-    # "integer" and "double" aren't actually yielded by yajl since "number"
-    # takes precedence if defined
-    ('integer', C_LONG, lambda *_args: None),
-    ('double', C_DOUBLE, lambda *_args: None),
-    ('number', C_STR, lambda v, l: common.number(b2s(string_at(v, l)))),
-    ('string', C_STR, lambda v, l: string_at(v, l).decode('utf-8')),
-    ('start_map', C_EMPTY, lambda: None),
-    ('map_key', C_STR, lambda v, l: string_at(v, l).decode('utf-8')),
-    ('end_map', C_EMPTY, lambda: None),
-    ('start_array', C_EMPTY, lambda: None),
-    ('end_array', C_EMPTY, lambda: None),
-]
-
-class Callbacks(Structure):
-    _fields_ = [(name, type) for name, type, func in _callback_data]
-
-YAJL_OK = 0
-YAJL_CANCELLED = 1
-YAJL_INSUFFICIENT_DATA = 2
-YAJL_ERROR = 3
+yajl = _yajl2_ctypes_common.get_yajl(2)
 
 # constants defined in yajl_parse.h
 YAJL_ALLOW_COMMENTS = 1
@@ -54,7 +16,8 @@ YAJL_MULTIPLE_VALUES = 8
 
 
 @utils.coroutine
-def basic_parse_basecoro(target, allow_comments=False, multiple_values=False):
+def basic_parse_basecoro(target, allow_comments=False, multiple_values=False,
+                         use_float=False):
     '''
     Iterator yielding unprefixed events.
 
@@ -65,19 +28,7 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False):
     - buf_size: a size of an input buffer
     - multiple_values: allows the parser to parse multiple JSON objects
     '''
-    send = target.send
-
-    def callback(event, func_type, func):
-        def c_callback(context, *args):
-            try:
-                value = func(*args)
-            except:
-                return 0
-            send((event, value))
-            return 1
-        return func_type(c_callback)
-
-    callbacks = Callbacks(*[callback(*data) for data in _callback_data])
+    callbacks = _yajl2_ctypes_common.make_callbaks(target.send, use_float)
     handle = yajl.yajl_alloc(byref(callbacks), None, None)
     if allow_comments:
         yajl.yajl_config(handle, YAJL_ALLOW_COMMENTS, 1)
@@ -93,11 +44,9 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False):
                 result = yajl.yajl_parse(handle, buffer, len(buffer))
             else:
                 result = yajl.yajl_complete_parse(handle)
-            if result != YAJL_OK:
-                perror = yajl.yajl_get_error(handle, 1, buffer, len(buffer))
-                error = cast(perror, c_char_p).value
-                yajl.yajl_free_error(handle, perror)
-                exception = common.IncompleteJSONError if result == YAJL_INSUFFICIENT_DATA else common.JSONError
+            if result != _yajl2_ctypes_common.YAJL_OK:
+                error = _yajl2_ctypes_common.yajl_get_error(yajl, handle, buffer)
+                exception = common.IncompleteJSONError if result == _yajl2_ctypes_common.YAJL_INSUFFICIENT_DATA else common.JSONError
                 raise exception(error.decode('utf-8'))
             if not buffer:
                 break
