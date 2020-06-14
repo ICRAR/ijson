@@ -1,0 +1,5 @@
+START_MAP = 'start_map'
+MAP_KEY = 'map_key'
+END_MAP = 'end_map'
+START_ARRAY = 'start_array'
+END_ARRAY = 'end_array'

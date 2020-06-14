@@ -5,7 +5,7 @@ import re
 from json.decoder import scanstring
 
 from ijson import common, utils
-
+from ijson.constants import END_ARRAY, END_MAP, MAP_KEY, START_ARRAY, START_MAP
 
 LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|\S')
 UNARY_LEXEMES = set('[]{},')
@@ -158,14 +158,14 @@ def parse_value(target, multivalue):
                 pop()
             # Array start
             elif symbol == '[':
-                send(('start_array', None))
+                send((START_ARRAY, None))
                 pos, symbol = (yield)
                 if (pos, symbol) == EOF:
                     if state_stack:
                         raise common.IncompleteJSONError('Incomplete JSON content')
                     break
                 if symbol == ']':
-                    send(('end_array', None))
+                    send((END_ARRAY, None))
                     pop()
                 else:
                     prev_pos, prev_symbol = pos, symbol
@@ -173,14 +173,14 @@ def parse_value(target, multivalue):
                     push(_PARSE_VALUE)
             # Object start
             elif symbol == '{':
-                send(('start_map', None))
+                send((START_MAP, None))
                 pos, symbol = (yield)
                 if (pos, symbol) == EOF:
                     if state_stack:
                         raise common.IncompleteJSONError('Incomplete JSON content')
                     break
                 if symbol == '}':
-                    send(('end_map', None))
+                    send((END_MAP, None))
                     pop()
                 else:
                     prev_pos, prev_symbol = pos, symbol
@@ -198,7 +198,7 @@ def parse_value(target, multivalue):
         elif state == _PARSE_OBJECT_KEY:
             if symbol[0] != '"':
                 raise UnexpectedSymbol(symbol, pos)
-            send(('map_key', parse_string(symbol)))
+            send((MAP_KEY, parse_string(symbol)))
             pos, symbol = (yield)
             if (pos, symbol) == EOF:
                 if state_stack:
@@ -215,7 +215,7 @@ def parse_value(target, multivalue):
             elif symbol != '}':
                 raise UnexpectedSymbol(symbol, pos)
             else:
-                send(('end_map', None))
+                send((END_MAP, None))
                 pop()
                 pop()
 
@@ -226,7 +226,7 @@ def parse_value(target, multivalue):
             elif symbol != ']':
                 raise UnexpectedSymbol(symbol, pos)
             else:
-                send(('end_array', None))
+                send((END_ARRAY, None))
                 pop()
                 pop()
 

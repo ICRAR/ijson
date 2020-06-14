@@ -2,7 +2,9 @@
 Backend independent higher level interfaces, common exceptions.
 '''
 import decimal
+
 from ijson import compat, utils
+from ijson.constants import END_ARRAY, END_MAP, MAP_KEY, START_ARRAY, START_MAP
 
 
 class JSONError(Exception):
@@ -67,22 +69,22 @@ def parse_basecoro(target):
     path = []
     while True:
         event, value = yield
-        if event == 'map_key':
+        if event == MAP_KEY:
             prefix = '.'.join(path[:-1])
             path[-1] = value
-        elif event == 'start_map':
+        elif event == START_MAP:
             prefix = '.'.join(path)
             path.append(None)
-        elif event == 'end_map':
+        elif event == END_MAP:
             path.pop()
             prefix = '.'.join(path)
-        elif event == 'start_array':
+        elif event == START_ARRAY:
             prefix = '.'.join(path)
             path.append('item')
-        elif event == 'end_array':
+        elif event == END_ARRAY:
             path.pop()
             prefix = '.'.join(path)
-        else: # any scalar value
+        else:  # any scalar value
             prefix = '.'.join(path)
         target.send((prefix, event, value))
 
@@ -115,19 +117,21 @@ class ObjectBuilder(object):
         self.map_type = map_type or dict
 
     def event(self, event, value):
-        if event == 'map_key':
+        if event == MAP_KEY:
             self.key = value
-        elif event == 'start_map':
+        elif event == START_MAP:
             mappable = self.map_type()
             self.containers[-1](mappable)
+
             def setter(value):
                 mappable[self.key] = value
+
             self.containers.append(setter)
-        elif event == 'start_array':
+        elif event == START_ARRAY:
             array = []
             self.containers[-1](array)
             self.containers.append(array.append)
-        elif event == 'end_array' or event == 'end_map':
+        elif event == END_ARRAY or event == END_MAP:
             self.containers.pop()
         else:
             self.containers[-1](value)
@@ -142,7 +146,7 @@ def items_basecoro(target, prefix, map_type=None):
     while True:
         current, event, value = (yield)
         if current == prefix:
-            if event in ('start_map', 'start_array'):
+            if event in (START_MAP, START_ARRAY):
                 builder = ObjectBuilder(map_type=map_type)
                 end_event = event.replace('start', 'end')
                 while (current, event) != (prefix, end_event):
@@ -160,10 +164,9 @@ def kvitems_basecoro(target, prefix, map_type=None):
     An coroutine dispatching (key, value) pairs constructed from the events
     under a given prefix. The prefix should point to JSON objects
     '''
-    builder = None
     while True:
         path, event, value = (yield)
-        while path == prefix and event == 'map_key':
+        while path == prefix and event == MAP_KEY:
             key = value
             builder = ObjectBuilder(map_type=map_type)
             path, event, value = (yield)
