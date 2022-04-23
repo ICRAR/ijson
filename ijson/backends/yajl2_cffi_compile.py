@@ -87,15 +87,16 @@ extern "Python" int (yajl_end_array)(void * ctx);
 """
 )
 
-
-if __name__ == "__main__":
-    ffi.set_source(
-        "_yajl2_cffi",
-        """
+ffi.set_source(
+    "_yajl2_cffi",
+    """
 #include <yajl/yajl_common.h>
 #include <yajl/yajl_version.h>
 #include <yajl/yajl_parse.h>
     """,
-        libraries=["yajl"],
-    )
+    libraries=["yajl"],
+)
+
+if __name__ == "__main__":
+
     ffi.compile(verbose=True)
