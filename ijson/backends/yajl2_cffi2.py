@@ -58,7 +58,7 @@ def integer(val):
     return int(val)
 
 
-@ffi.def_extern("yajl_boolean")
+@ffi.def_extern("yajl_double")
 @append_event_to_ctx("number")
 def double(val):
     return val
