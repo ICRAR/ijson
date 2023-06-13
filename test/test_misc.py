@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 
 from ijson import common, compat
@@ -15,6 +16,15 @@ class Misc(unittest.TestCase):
             common.number("1")
         self.assertEqual(len(warns), 1)
         self.assertEqual(DeprecationWarning, warns[0].category)
+
+    def test_yajl2_c_loadable(self):
+        if compat.IS_PY2:
+            self.skipTest("Test requires Python 3.4+")
+        spec = importlib.util.find_spec("ijson.backends._yajl2")
+        if spec is None:
+            self.skipTest("yajl2_c is not built")
+        importlib.util.module_from_spec(spec)
+
 
 class MainEntryPoints(object):
 
