@@ -117,6 +117,7 @@ This is achieved using the ``parse`` function:
 .. code-block::  python
 
     import ijson
+    import stream
 
     parser = ijson.parse(urlopen('http://.../'))
     stream.write('<geo>')
