@@ -85,7 +85,7 @@ jobs:
           CIBW_TEST_COMMAND: "bash -c 'cd \"{project}\"; pytest -vv'"
           CIBW_TEST_REQUIRES: pytest cffi
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
 
@@ -106,7 +106,7 @@ jobs:
       - name: Build sdist
         run: python setup.py sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
 
