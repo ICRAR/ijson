@@ -39,18 +39,18 @@ class GeneratorSpecificTests(FileBasedTests):
 
     def test_lazy(self):
         # shouldn't fail since iterator is not exhausted
-        self.backend.basic_parse(io.BytesIO(INVALID_JSONS[0]))
-        self.assertTrue(True)
+        basic_parse = self.backend.basic_parse(io.BytesIO(INVALID_JSONS[0]))
+        assert basic_parse is not None
 
     def test_boundary_lexeme(self):
         buf_size = JSON.index(b'false') + 1
         events = self.get_all(self.basic_parse, JSON, buf_size=buf_size)
-        self.assertEqual(events, JSON_EVENTS)
+        assert events == JSON_EVENTS
 
     def test_boundary_whitespace(self):
         buf_size = JSON.index(b'   ') + 1
         events = self.get_all(self.basic_parse, JSON, buf_size=buf_size)
-        self.assertEqual(events, JSON_EVENTS)
+        assert events == JSON_EVENTS
 
     def test_item_building_greediness(self):
         self._test_item_iteration_validity(io.BytesIO)
@@ -63,7 +63,7 @@ class GeneratorSpecificTests(FileBasedTests):
             json, expected_items = json[0], json[1:]
             iterable = self.backend.items(file_type(json), 'item')
             for expected_item in expected_items:
-                self.assertEqual(expected_item, next(iterable))
+                assert expected_item == next(iterable)
 
 
     COMMON_DATA = b'''
@@ -104,7 +104,7 @@ class GeneratorSpecificTests(FileBasedTests):
             if prefix == 'skip':
                 skip_value = value
                 break
-        self.assertEqual(skip_value, 'skip_value')
+        assert skip_value == 'skip_value'
 
     def _test_common_routine(self, routine, *args, **kwargs):
         base_routine_name = kwargs.pop('base_routine_name', 'parse')
@@ -119,20 +119,20 @@ class GeneratorSpecificTests(FileBasedTests):
         with warning_catcher() as warns:
             results = self._test_common_routine(common.parse,
                                                 base_routine_name='basic_parse')
-        self.assertEqual(self.COMMON_PARSE, results)
-        self.assertEqual(len(warns), 1)
+        assert self.COMMON_PARSE == results
+        assert 1 == len(warns)
 
     def test_common_kvitems(self):
         with warning_catcher() as warns:
             results = self._test_common_routine(common.kvitems, 'c')
-        self.assertEqual([("d", "e"), ("f", "g")], results)
-        self.assertEqual(len(warns), 1)
+        assert [("d", "e"), ("f", "g")] == results
+        assert 1 == len(warns)
 
     def test_common_items(self):
         with warning_catcher() as warns:
             results = self._test_common_routine(common.items, 'list.item')
-        self.assertEqual([{"o1": 1}, {"o2": 2}], results)
-        self.assertEqual(len(warns), 1)
+        assert [{"o1": 1}, {"o2": 2}] == results
+        assert 1 == len(warns)
 
 
 def _reader(json):

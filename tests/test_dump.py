@@ -1,12 +1,11 @@
 import os
 import subprocess
 import sys
-import unittest
 
 from tests.test_base import JSON
 
 
-class DumpTests(unittest.TestCase):
+class TestDump:
 
     def _do_test_dump(self, method, multiple_values):
         # Use python backend to ensure multiple_values works
@@ -26,7 +25,7 @@ class DumpTests(unittest.TestCase):
             input_data += JSON
         out, err = proc.communicate(input_data)
         status = proc.wait()
-        self.assertEqual(0, status, "out:\n%s\nerr:%s" % (out.decode('utf-8'), err.decode('utf-8')))
+        assert 0 == status, "out:\n%s\nerr:%s" % (out.decode('utf-8'), err.decode('utf-8'))
 
     def _test_dump(self, method):
         self._do_test_dump(method, True)

@@ -1,6 +1,7 @@
 import importlib.util
 import io
-import unittest
+
+import pytest
 
 from ijson import common
 
@@ -9,14 +10,14 @@ from tests.test_base import JSON, JSON_EVENTS, JSON_PARSE_EVENTS, JSON_OBJECT,\
     generate_backend_specific_tests, JSON_KVITEMS
 
 
-class Misc(unittest.TestCase):
+class Misc:
     """Miscellaneous unit tests"""
 
     def test_common_number_is_deprecated(self):
         with warning_catcher() as warns:
             common.number("1")
-        self.assertEqual(len(warns), 1)
-        self.assertEqual(DeprecationWarning, warns[0].category)
+        assert 1 == len(warns)
+        assert DeprecationWarning, warns[0].category
 
     def test_yajl2_c_loadable(self):
         spec = importlib.util.find_spec("ijson.backends._yajl2")
@@ -29,32 +30,32 @@ class MainEntryPoints:
 
     def _assert_invalid_type(self, routine, *args, **kwargs):
         # Functions are not valid inputs
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             routine(lambda _: JSON, *args, **kwargs)
 
     def _assert_bytes(self, expected_results, routine, *args, **kwargs):
         results = list(routine(JSON, *args, **kwargs))
-        self.assertEqual(expected_results, results)
+        assert expected_results == results
 
     def _assert_str(self, expected_results, routine, *args, **kwargs):
         with warning_catcher() as warns:
             results = list(routine(JSON.decode("utf-8"), *args, **kwargs))
-        self.assertEqual(expected_results, results)
-        self.assertEqual(1, len(warns))
+        assert expected_results == results
+        assert 1 == len(warns)
 
     def _assert_file(self, expected_results, routine, *args, **kwargs):
         results = list(routine(io.BytesIO(JSON), *args, **kwargs))
-        self.assertEqual(expected_results, results)
+        assert expected_results == results
 
     def _assert_async_file(self, expected_results, routine, *args, **kwargs):
         from ._test_async import get_all
         results = get_all(routine, JSON, *args, **kwargs)
-        self.assertEqual(expected_results, results)
+        expected_results == results
 
     def _assert_async_types_coroutine(self, expected_results, routine, *args, **kwargs):
         from ._test_async_types_coroutine import get_all
         results = get_all(routine, JSON, *args, **kwargs)
-        self.assertEqual(expected_results, results)
+        assert expected_results == results
 
     def _assert_events(self, expected_results, previous_routine, routine, *args, **kwargs):
         events = previous_routine(io.BytesIO(JSON))
@@ -64,7 +65,7 @@ class MainEntryPoints:
             for evt in events:
                 yield evt
         results = list(routine(event_yielder(), *args, **kwargs))
-        self.assertEqual(expected_results, results)
+        assert expected_results == results
 
     def _assert_entry_point(self, expected_results, previous_routine, routine,
                             *args, **kwargs):
