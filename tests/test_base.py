@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import collections
 import ctypes
 from decimal import Decimal
+import itertools
 import threading
 
 import pytest
@@ -349,6 +350,14 @@ class IJsonTestsBase:
     a particuliar method.
     '''
 
+    def _raises_json_error(self, json, **kwargs):
+        with pytest.raises(common.JSONError):
+            self.get_all(self.basic_parse, json, **kwargs)
+
+    def _raises_incomplete_json_error(self, json):
+        with pytest.raises(common.IncompleteJSONError):
+            self.get_all(self.basic_parse, json)
+
     def test_basic_parse(self):
         events = self.get_all(self.basic_parse, JSON)
         assert JSON_EVENTS == events
@@ -372,17 +381,19 @@ class IJsonTestsBase:
         assert 2 == len(ids)
         assert [-2,-1], sorted(ids)
 
-    def test_items_with_dotted_name(self):
-        json = b'{"0.1": 0}'
-        assert [0] == self.get_all(self.items, json, '0.1')
-        json = b'{"0.1": [{"a.b": 0}]}'
-        assert [0] == self.get_all(self.items, json, '0.1.item.a.b')
-        json = b'{"0.1": 0, "0": {"1": 1}}'
-        assert [0, 1] == self.get_all(self.items, json, '0.1')
-        json = b'{"abc.def": 0}'
-        assert [0] == self.get_all(self.items, json, 'abc.def')
-        assert [] == self.get_all(self.items, json, 'abc')
-        assert [] == self.get_all(self.items, json, 'def')
+    @pytest.mark.parametrize(
+        "json, prefix, expected_items",
+        (
+            (b'{"0.1": 0}', '0.1', [0]),
+            (b'{"0.1": [{"a.b": 0}]}', '0.1.item.a.b', [0]),
+            (b'{"0.1": 0, "0": {"1": 1}}', '0.1', [0, 1]),
+            (b'{"abc.def": 0}', 'abc.def', [0]),
+            (b'{"abc.def": 0}', 'abc', []),
+            (b'{"abc.def": 0}', 'def', []),
+        )
+    )
+    def test_items_with_dotted_name(self, json, prefix, expected_items):
+        assert expected_items == self.get_all(self.items, json, prefix)
 
     def test_map_type(self):
         obj = self.get_first(self.items, JSON, '')
@@ -453,77 +464,86 @@ class IJsonTestsBase:
         parsed_string = event[1]
         assert '💩' == parsed_string
 
-    def test_numbers(self):
+    def _get_numbers(self, json, use_float):
+        events = self.get_all(self.basic_parse, json, use_float=use_float)
+        return [value for event, value in events if event == 'number']
+
+
+    @pytest.mark.parametrize(
+        "json, expected_float_type, expected_numbers, use_float",
+        (
+            (b'[1, 1.0, 1E2]', Decimal, [1, Decimal("1.0"), Decimal("1e2")], False),
+            (b'[1, 1.0, 1E2]', float, [1, 1., 100.], True),
+            (b'1e400', Decimal, [Decimal('1e400')], False),
+            (b'1e-400', Decimal, [Decimal('1e-400')], False),
+            (b'1e-400', float, [0], True),
+        )
+    )
+    def test_numbers(self, json, expected_float_type, expected_numbers, use_float):
         """Check that numbers are correctly parsed"""
+        numbers = self._get_numbers(json, use_float=use_float)
+        float_types = set(type(number) for number in numbers)
+        float_types -= {int}
+        assert 1 == len(float_types)
+        assert expected_float_type == next(iter(float_types))
+        assert expected_numbers == numbers
 
-        def get_numbers(json, **kwargs):
-            events = self.get_all(self.basic_parse, json, **kwargs)
-            return events, tuple(value for event, value in events if event == 'number')
 
-        def assert_numbers(json, expected_float_type, *numbers, **kwargs):
-            events, values = get_numbers(json, **kwargs)
-            float_types = set(type(value) for event, value in events if event == 'number')
-            float_types -= {int}
-            assert 1 == len(float_types)
-            assert expected_float_type == next(iter(float_types))
-            assert numbers == values
-
-        NUMBERS_JSON = b'[1, 1.0, 1E2]'
-        assert_numbers(NUMBERS_JSON, Decimal, 1, Decimal("1.0"), Decimal("1e2"))
-        assert_numbers(NUMBERS_JSON, float, 1, 1., 100., use_float=True)
-        assert_numbers(b'1e400', Decimal, Decimal('1e400'))
-        assert_numbers(b'1e-400', Decimal, Decimal('1e-400'))
-        assert_numbers(b'1e-400', float, 0., use_float=True)
-
-        # Test for 64-bit integers support when using use_float=True
+    def test_32bit_ints(self):
+        """Test for 64-bit integers support when using use_float=true"""
         past32bits = 2 ** 32 + 1
         past32bits_as_json = ('%d' % past32bits).encode('utf8')
         if self.backend.capabilities.int64:
-            received = get_numbers(past32bits_as_json, use_float=True)[1][0]
-            assert past32bits == received
+            parsed_number = self._get_numbers(past32bits_as_json, use_float=True)[0]
+            assert past32bits == parsed_number
         else:
-            with pytest.raises(common.JSONError):
-                self.get_all(self.basic_parse, past32bits_as_json, use_float=True)
+            self._raises_json_error(past32bits_as_json, use_float=True)
 
-        # Check that numbers bigger than MAX_DOUBLE cannot be represented
-        with pytest.raises(common.JSONError):
-            get_numbers(b'1e400', use_float=True)
+    def test_max_double(self):
+        """Check that numbers bigger than MAX_DOUBLE (usually ~1e308) cannot be represented"""
+        self._raises_json_error(b'1e400', use_float=True)
 
-    def test_invalid_numbers(self):
-        # leading zeros
-        if self.backend.capabilities.invalid_leading_zeros_detection:
-            for case in (b'00',   b'01',   b'001'):
-                for base in (case, case + b'.0', case + b'e0', case + b'E0'):
-                    for n in (base, b'-' + base):
-                        with pytest.raises(common.JSONError):
-                            self.get_all(self.basic_parse, n)
-        # incomplete exponents
-        for n in (b'1e', b'0.1e', b'0E'):
-            with pytest.raises(common.JSONError):
-                self.get_all(self.basic_parse, n)
-        # incomplete fractions
-        for n in (b'1.', b'.1'):
-            with pytest.raises(common.JSONError):
-                self.get_all(self.basic_parse, n)
+    @pytest.mark.parametrize(
+        "json", [
+            sign + prefix + suffix
+            for sign, prefix, suffix in itertools.product(
+                (b'', b'-'),
+                (b'00', b'01', b'001'),
+                (b'', b'.0', b'e0', b'E0')
+            )
+        ]
+    )
+    def test_invalid_leading_zeros(self, json):
+        """Check leading zeros are invalid"""
+        if not self.backend.capabilities.invalid_leading_zeros_detection:
+            return
+        self._raises_json_error(json)
+
+    @pytest.mark.parametrize("json", (b'1e', b'0.1e', b'0E'))
+    def test_incomplete_exponents(self, json):
+        """incomplete exponents are invalid JSON"""
+        self._raises_json_error(json)
+
+    @pytest.mark.parametrize("json", (b'1.', b'.1'))
+    def test_incomplete_fractions(self, json):
+        """incomplete fractions are invalid JSON"""
+        self._raises_json_error(json)
 
     def test_incomplete(self):
         for json in INCOMPLETE_JSONS:
-            with pytest.raises(common.IncompleteJSONError):
-                self.get_all(self.basic_parse, json)
+            self._raises_incomplete_json_error(json)
 
     def test_incomplete_tokens(self):
         if not self.backend.capabilities.incomplete_json_tokens_detection:
             return
         for json in INCOMPLETE_JSON_TOKENS:
-            with pytest.raises(common.IncompleteJSONError):
-                self.get_all(self.basic_parse, json)
+            self._raises_incomplete_json_error(json)
 
     def test_invalid(self):
         for json in INVALID_JSONS:
             if not self.backend.capabilities.incomplete_json_tokens_detection and json == INVALID_JSON_WITH_DANGLING_JUNK:
                 continue
-            with pytest.raises(common.JSONError):
-                self.get_all(self.basic_parse, json)
+            self._raises_json_error(json)
 
     def test_multiple_values(self):
         """Test that the multiple_values flag works"""
@@ -553,23 +573,19 @@ class IJsonTestsBase:
             with pytest.raises(ValueError):
                 self.get_all(self.basic_parse, json, allow_comments=True)
 
-    def _test_empty_member(self, test_case):
+    @pytest.mark.parametrize("test_case", [
+        pytest.param(value, id=name) for name, value in EMPTY_MEMBER_TEST_CASES.items()
+    ])
+    def test_kvitems_empty_member(self, test_case):
         pairs = self.get_all(self.kvitems, test_case.json, test_case.prefix)
         assert test_case.kvitems == pairs
+
+    @pytest.mark.parametrize("test_case", [
+        pytest.param(value, id=name) for name, value in EMPTY_MEMBER_TEST_CASES.items()
+    ])
+    def test_items_empty_member(self, test_case):
         objects = self.get_all(self.items, test_case.json, test_case.prefix)
         assert test_case.items == objects
-
-    def test_empty_member(self):
-        self._test_empty_member(EMPTY_MEMBER_TEST_CASES['simple'])
-
-    def test_embedded_empty_member(self):
-        self._test_empty_member(EMPTY_MEMBER_TEST_CASES['embedded'])
-
-    def test_top_level_empty_member(self):
-        self._test_empty_member(EMPTY_MEMBER_TEST_CASES['top_level'])
-
-    def test_top_level_embedded_empty_member(self):
-        self._test_empty_member(EMPTY_MEMBER_TEST_CASES['top_level_embedded'])
 
 
 class FileBasedTests:
