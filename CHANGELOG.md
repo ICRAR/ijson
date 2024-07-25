@@ -7,6 +7,10 @@
   (which might or not be available at runtime).
 * Added a `capabilities` constant to each backend
   describing which capabilities it supports.
+* Exposing backend's name under ``<backend>.backend_name``,
+  and default backend's name under ``ijson.backend_name``.
+  This is similar to the already existing ``name`` constant,
+  only slightly better named to hopefully avoid confusion.
 * Removed tox.
 
 ## [3.3.0]

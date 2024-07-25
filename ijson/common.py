@@ -494,6 +494,7 @@ def enrich_backend(backend, **capabilities_overrides):
         setattr(capabilities, name, value)
     backend['capabilities'] = capabilities
     backend['backend'] = backend['__name__'].split('.')[-1]
+    backend['backend_name'] = backend['backend']
     for name in ('basic_parse', 'parse', 'items', 'kvitems'):
         basecoro_name = name + '_basecoro'
         if basecoro_name not in backend:

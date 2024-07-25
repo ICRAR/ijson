@@ -55,4 +55,5 @@ basic_parse_async = backend.basic_parse_async
 parse_async = backend.parse_async
 items_async = backend.items_async
 kvitems_async = backend.kvitems_async
+backend_name = backend.backend_name
 backend = backend.backend
