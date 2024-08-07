@@ -16,7 +16,7 @@ from setuptools import setup, find_packages, Extension
 def get_ijson_version():
     """Get version from code without fully importing it"""
     _globals = {}
-    with open(os.path.join('ijson', 'version.py')) as f:
+    with open(os.path.join('src', 'ijson', 'version.py')) as f:
         code = f.read()
     exec(code, _globals)
     return _globals['__version__']
@@ -47,7 +47,8 @@ setupArgs = dict(
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    packages = find_packages(exclude=['test']),
+    packages = find_packages(where=["src"]),
+    package_dir={"": "src"},
 )
 
 # Check if the yajl library + headers are present
@@ -120,10 +121,10 @@ build_yajl = os.environ.get('IJSON_BUILD_YAJL2C', build_yajl_default) == '1'
 if build_yajl:
     yajl_ext = Extension('ijson.backends._yajl2',
                          language='c',
-                         sources=sorted(glob.glob('ijson/backends/yajl2_c/*.c')) + extra_sources,
-                         include_dirs=['ijson/backends/yajl2_c'] + extra_include_dirs,
+                         sources=sorted(glob.glob('src/ijson/backends/ext/_yajl2/*.c')) + extra_sources,
+                         include_dirs=['src/ijson/backends/ext/_yajl2'] + extra_include_dirs,
                          libraries=libs,
-                         depends=glob.glob('ijson/backends/yajl2_c/*.h'))
+                         depends=glob.glob('src/ijson/backends/ext/_yajl2/*.h'))
     setupArgs['ext_modules'] = [yajl_ext]
 
 setup(**setupArgs)

@@ -3,4 +3,4 @@ include README.rst
 include CHANGELOG.md
 graft test
 include tox.ini
-graft ijson/backends/yajl2_c
+graft src/ijson/backends/ext/

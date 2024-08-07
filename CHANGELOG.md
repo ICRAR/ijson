@@ -11,6 +11,9 @@
   and default backend's name under ``ijson.backend_name``.
   This is similar to the already existing ``name`` constant,
   only slightly better named to hopefully avoid confusion.
+* Restructured source code so all code lives under `src/`,
+  and the `ijson.backends._yajl2` extension under `src/ijson/backends/ext/_yajl2`.
+  This allows C backend tests to actually run on cibuildwheel.
 * Removed tox.
 
 ## [3.3.0]
