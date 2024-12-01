@@ -136,34 +136,8 @@ class ObjectBuilder:
         else:
             self.containers[-1](value)
 
-
-@utils.coroutine
-def items_basecoro(target, prefix, map_type=None):
-    '''
-    An couroutine dispatching native Python objects constructed from the events
-    under a given prefix.
-    '''
-    while True:
-        current, event, value = (yield)
-        if current == prefix:
-            if event in ('start_map', 'start_array'):
-                object_depth = 1
-                builder = ObjectBuilder(map_type=map_type)
-                while object_depth:
-                    builder.event(event, value)
-                    current, event, value = (yield)
-                    if event in ('start_map', 'start_array'):
-                        object_depth += 1
-                    elif event in ('end_map', 'end_array'):
-                        object_depth -= 1
-                del builder.containers[:]
-                target.send(builder.value)
-            else:
-                target.send(value)
-
 @utils.coroutine
 def prefixed_items_basecoro(target, prefix, map_type=None):
-    # FIXME deduplicate code
     while True:
         current, event, value = (yield)
         if current == prefix:
@@ -181,6 +155,19 @@ def prefixed_items_basecoro(target, prefix, map_type=None):
                 target.send((prefix, builder.value))
             else:
                 target.send((prefix, value))
+
+def items_basecoro(target, prefix, map_type=None):
+    '''
+    An couroutine dispatching native Python objects constructed from the events
+    under a given prefix.
+    '''
+    @utils.coroutine
+    def strip_prefix():
+        while True:
+            prefix, value = (yield)
+            target.send(value)
+
+    return prefixed_items_basecoro(strip_prefix(), prefix, map_type)
 
 @utils.coroutine
 def kvitems_basecoro(target, prefix, map_type=None):
