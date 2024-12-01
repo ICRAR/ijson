@@ -67,4 +67,17 @@ def items_async(file, prefix, map_type=None, **kwargs):
     buf_size = _get_buf_size(kwargs)
     return _yajl2.items_async(file, buf_size, prefix, map_type, **kwargs)
 
+@utils.coroutine
+def prefixed_items_basecoro(target, prefix, map_type=None, **kwargs):
+    return _yajl2.prefixed_items_basecoro(target.send, prefix, map_type, **kwargs)
+
+def prefixed_items_gen(file, prefix, map_type=None, **kwargs):
+    f = compat.bytes_reader(file)
+    buf_size = _get_buf_size(kwargs)
+    return _yajl2.prefixed_items(f, buf_size, prefix, map_type, **kwargs)
+
+def prefixed_items_async(file, prefix, map_type=None, **kwargs):
+    buf_size = _get_buf_size(kwargs)
+    return _yajl2.prefixed_items_async(file, buf_size, prefix, map_type, **kwargs)
+
 common.enrich_backend(globals())

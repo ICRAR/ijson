@@ -84,6 +84,13 @@ def _make_items_async(backend):
         )
     return items_async
 
+def _make_prefixed_items_async(backend):
+    def prefixed_items_async(f, prefix, map_type=None, buf_size=64*1024, **config):
+        return async_iterable(f, buf_size,
+            *common._prefixed_items_pipeline(backend, prefix, map_type, config)
+        )
+    return prefixed_items_async
+
 def _make_kvitems_async(backend):
     def kvitems_async(f, prefix, map_type=None, buf_size=64*1024, **config):
         return async_iterable(f, buf_size,
