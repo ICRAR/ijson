@@ -11,20 +11,12 @@
 #ifndef ITEMS_BASECORO_H
 #define ITEMS_BASECORO_H
 
-#include "builder.h"
-#include "module_state.h"
+#include "items_common.h"
 
 /**
  * items_basecoro coroutine object structure
  */
-typedef struct {
-    PyObject_HEAD
-    builder_t builder;
-    PyObject *target_send;
-    PyObject *prefix;
-    int object_depth;
-    yajl2_state *module_state;
-} ItemsBasecoro;
+typedef ItemsCommonBasecoro ItemsBasecoro;
 
 /**
  * items_basecoro coroutine object type
