@@ -138,9 +138,10 @@ class ObjectBuilder:
 
 @utils.coroutine
 def prefixed_items_basecoro(target, prefix, map_type=None):
+    prefix = set([prefix]) if isinstance(prefix, str) else set(prefix)
     while True:
         current, event, value = (yield)
-        if current == prefix:
+        if current in prefix:
             if event in ('start_map', 'start_array'):
                 object_depth = 1
                 builder = ObjectBuilder(map_type=map_type)

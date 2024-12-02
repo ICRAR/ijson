@@ -36,7 +36,7 @@ PyObject* items_common_send_top(PyObject *self, PyObject *path, PyObject *event,
 		}
 	}
 	else {
-		int cmp = PyObject_RichCompareBool(path, coro->prefix, Py_EQ);
+		int cmp = PySet_Contains(coro->prefix, path);
 		N_M1(cmp);
 		if (cmp) {
 			if (event == enames.start_map_ename || event == enames.start_array_ename) {

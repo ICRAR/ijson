@@ -24,9 +24,16 @@ static int items_basecoro_init(ItemsBasecoro *self, PyObject *args, PyObject *kw
 	builder_create(&self->builder);
 
 	PyObject *map_type;
-	M1_Z(PyArg_ParseTuple(args, "OOO", &(self->target_send), &(self->prefix), &map_type));
+	PyObject *prefix;
+	M1_Z(PyArg_ParseTuple(args, "OOO", &(self->target_send), &prefix, &map_type));
 	Py_INCREF(self->target_send);
-	Py_INCREF(self->prefix);
+	if (PyUnicode_Check(prefix)) {
+		M1_N(self->prefix = PySet_New(NULL));
+		M1_M1(PySet_Add(self->prefix, prefix));
+	}
+	else {
+		M1_N(self->prefix = PySet_New(prefix));
+	}
 	M1_M1(builder_init(&self->builder, map_type));
 
 	return 0;
