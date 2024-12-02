@@ -11,7 +11,12 @@
 #ifndef PREFIXED_ITEMS_BASECORO_H
 #define PREFIXED_ITEMS_BASECORO_H
 
+#define SPECIFIC_ITEMS_CMP(prefix, path) \
+	PySet_Contains((prefix), (path))
+
 #include "items_common.h"
+
+#undef SPECIFIC_ITEMS_CMP
 
 /**
  * prefixed_items_basecoro coroutine object structure

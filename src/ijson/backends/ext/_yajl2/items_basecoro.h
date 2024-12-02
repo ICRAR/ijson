@@ -11,7 +11,12 @@
 #ifndef ITEMS_BASECORO_H
 #define ITEMS_BASECORO_H
 
+#define SPECIFIC_ITEMS_CMP(prefix, path) \
+	PyObject_RichCompareBool((path), (prefix), Py_EQ)
+
 #include "items_common.h"
+
+#undef SPECIFIC_ITEMS_CMP
 
 /**
  * items_basecoro coroutine object structure
