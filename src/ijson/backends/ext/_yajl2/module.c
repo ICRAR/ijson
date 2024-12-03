@@ -20,6 +20,9 @@
 #include "items.h"
 #include "items_async.h"
 #include "items_basecoro.h"
+#include "prefixed_items.h"
+#include "prefixed_items_async.h"
+#include "prefixed_items_basecoro.h"
 #include "kvitems.h"
 #include "kvitems_async.h"
 #include "kvitems_basecoro.h"
@@ -114,11 +117,14 @@ static int _yajl2_mod_exec(PyObject *m)
 	ADD_TYPE("kvitems", KVItemsGen_Type);
 	ADD_TYPE("items_basecoro", ItemsBasecoro_Type);
 	ADD_TYPE("items", ItemsGen_Type);
+	ADD_TYPE("prefixed_items_basecoro", PrefixedItemsBasecoro_Type);
+	ADD_TYPE("prefixed_items", PrefixedItemsGen_Type);
 	ADD_TYPE("_async_reading_iterator", AsyncReadingGeneratorType);
 	ADD_TYPE("basic_parse_async", BasicParseAsync_Type);
 	ADD_TYPE("parse_async", ParseAsync_Type);
 	ADD_TYPE("kvitems_async", KVItemsAsync_Type);
 	ADD_TYPE("items_async", ItemsAsync_Type);
+	ADD_TYPE("prefixed_items_async", PrefixedItemsAsync_Type);
 
 	yajl2_state *state;
 	M1_N(state = get_state(m));

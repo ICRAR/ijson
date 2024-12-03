@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "items_basecoro.h"
+#include "prefixed_items_basecoro.h"
 #include "kvitems_basecoro.h"
 #include "parse_basecoro.h"
 
@@ -115,6 +116,9 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 	}
 	else if (ItemsBasecoro_Check(gen->target_send)) {
 		items_basecoro_send_impl(gen->target_send, prefix, event, value);
+	}
+	else if (PrefixedItemsBasecoro_Check(gen->target_send)) {
+		prefixed_items_basecoro_send_impl(gen->target_send, prefix, event, value);
 	}
 	else {
 		PyObject *res = PyTuple_Pack(3, prefix, event, value);
