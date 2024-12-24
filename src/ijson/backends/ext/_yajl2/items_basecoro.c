@@ -19,6 +19,7 @@ static int items_basecoro_init(ItemsBasecoro *self, PyObject *args, PyObject *kw
 	self->target_send = NULL;
 	self->prefix = NULL;
 	self->object_depth = 0;
+	self->pending_builder_reset = 0;
 	M1_N(self->module_state = get_state_from_imported_module());
 	builder_create(&self->builder);
 
@@ -42,35 +43,13 @@ static void items_basecoro_dealloc(ItemsBasecoro *self)
 PyObject* items_basecoro_send_impl(PyObject *self, PyObject *path, PyObject *event, PyObject *value)
 {
 	ItemsBasecoro *coro = (ItemsBasecoro *)self;
-	enames_t enames = coro->module_state->enames;
 
-	if (builder_isactive(&coro->builder)) {
-		coro->object_depth += (event == enames.start_map_ename || event == enames.start_array_ename);
-		coro->object_depth -= (event == enames.end_map_ename || event == enames.end_array_ename);
-		if (coro->object_depth > 0) {
-			N_M1( builder_event(&coro->builder, enames, event, value) );
-		}
-		else {
-			PyObject *retval = builder_value(&coro->builder);
-			CORO_SEND(coro->target_send, retval);
-			Py_DECREF(retval);
-			N_M1(builder_reset(&coro->builder));
-		}
-	}
-	else {
-		int cmp = PyObject_RichCompareBool(path, coro->prefix, Py_EQ);
-		N_M1(cmp);
-		if (cmp) {
-			if (event == enames.start_map_ename || event == enames.start_array_ename) {
-				coro->object_depth = 1;
-				N_M1(builder_event(&coro->builder, enames, event, value));
-			}
-			else {
-				CORO_SEND(coro->target_send, value);
-			}
-		}
-	}
-
+	PyObject *retval;
+	N_N(retval = items_common_send_top(self, path, event, value));
+	if (retval == Py_None)
+		Py_RETURN_NONE;
+	CORO_SEND(coro->target_send, retval);
+	items_common_send_bottom(self, retval);
 	Py_RETURN_NONE;
 }
 

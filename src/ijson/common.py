@@ -136,16 +136,12 @@ class ObjectBuilder:
         else:
             self.containers[-1](value)
 
-
 @utils.coroutine
-def items_basecoro(target, prefix, map_type=None):
-    '''
-    An couroutine dispatching native Python objects constructed from the events
-    under a given prefix.
-    '''
+def prefixed_items_basecoro(target, prefix, map_type=None):
+    prefix = set([prefix]) if isinstance(prefix, str) else set(prefix)
     while True:
         current, event, value = (yield)
-        if current == prefix:
+        if current in prefix:
             if event in ('start_map', 'start_array'):
                 object_depth = 1
                 builder = ObjectBuilder(map_type=map_type)
@@ -157,10 +153,22 @@ def items_basecoro(target, prefix, map_type=None):
                     elif event in ('end_map', 'end_array'):
                         object_depth -= 1
                 del builder.containers[:]
-                target.send(builder.value)
+                target.send((prefix, builder.value))
             else:
-                target.send(value)
+                target.send((prefix, value))
 
+def items_basecoro(target, prefix, map_type=None):
+    '''
+    An couroutine dispatching native Python objects constructed from the events
+    under a given prefix.
+    '''
+    @utils.coroutine
+    def strip_prefix():
+        while True:
+            prefix, value = (yield)
+            target.send(value)
+
+    return prefixed_items_basecoro(strip_prefix(), prefix, map_type)
 
 @utils.coroutine
 def kvitems_basecoro(target, prefix, map_type=None):
@@ -244,6 +252,14 @@ def _items_pipeline(backend, prefix, map_type, config):
     )
 
 
+def _prefixed_items_pipeline(backend, prefix, map_type, config):
+    return (
+        (backend['prefixed_items_basecoro'], (prefix,), {'map_type': map_type}),
+        (backend['parse_basecoro'], [], {}),
+        (backend['basic_parse_basecoro'], [], config)
+    )
+
+
 def _kvitems_pipeline(backend, prefix, map_type, config):
     return (
         (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type}),
@@ -278,6 +294,13 @@ def _make_items_coro(backend):
         )
     return items_coro
 
+def _make_prefixed_items_coro(backend):
+    def prefixed_items_coro(target, prefix, map_type=None, **config):
+        return utils.chain(
+            target,
+            *_prefixed_items_pipeline(backend, prefix, map_type, config)
+        )
+    return prefixed_items_coro
 
 def _make_kvitems_coro(backend):
     def kvitems_coro(target, prefix, map_type=None, **config):
@@ -349,6 +372,15 @@ def _make_items_gen(backend):
     return items_gen
 
 
+def _make_prefixed_items_gen(backend):
+    def prefixed_items_gen(file_obj, prefix, map_type=None, buf_size=64*1024, **config):
+        return utils.coros2gen(
+            file_source(file_obj, buf_size=buf_size),
+            *_prefixed_items_pipeline(backend, prefix, map_type, config)
+        )
+    return prefixed_items_gen
+
+
 def _make_kvitems_gen(backend):
     def kvitems_gen(file_obj, prefix, map_type=None, buf_size=64*1024, **config):
         return utils.coros2gen(
@@ -411,6 +443,25 @@ def _make_items(backend):
     return items
 
 
+def _make_prefixed_items(backend):
+    def prefixed_items(source, prefix, map_type=None, buf_size=64*1024, **config):
+        source = _get_source(source)
+        if is_async_file(source):
+            return backend['prefixed_items_async'](
+                source, prefix, map_type=map_type, buf_size=buf_size, **config
+            )
+        elif is_file(source):
+            return backend['prefixed_items_gen'](
+                source, prefix, map_type=map_type, buf_size=buf_size, **config
+            )
+        elif is_iterable(source):
+            return utils.coros2gen(source,
+                (backend['prefixed_items_basecoro'], (prefix,), {'map_type': map_type})
+            )
+        raise ValueError("Unknown source type: %r" % type(source))
+    return prefixed_items
+
+
 def _make_kvitems(backend):
     def kvitems(source, prefix, map_type=None, buf_size=64*1024, **config):
         source = _get_source(source)
@@ -462,6 +513,14 @@ def items(events, prefix, map_type=None):
     )
 
 
+def prefixed_items(events, prefix, map_type=None):
+    """Like ijson.prefixed_items, but takes events generated via ijson.parse instead of
+    a file"""
+    warnings.warn(_common_functions_warn, DeprecationWarning)
+    return utils.coros2gen(events,
+        (prefixed_items_basecoro, (prefix,), {'map_type': map_type})
+    )
+
 class BackendCapabilities:
     '''
     Capabilities supported by a backend.
@@ -495,7 +554,7 @@ def enrich_backend(backend, **capabilities_overrides):
     backend['capabilities'] = capabilities
     backend['backend'] = backend['__name__'].split('.')[-1]
     backend['backend_name'] = backend['backend']
-    for name in ('basic_parse', 'parse', 'items', 'kvitems'):
+    for name in ('basic_parse', 'parse', 'items', 'prefixed_items', 'kvitems'):
         basecoro_name = name + '_basecoro'
         if basecoro_name not in backend:
             backend[basecoro_name] = globals()[basecoro_name]

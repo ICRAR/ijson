@@ -11,20 +11,17 @@
 #ifndef ITEMS_BASECORO_H
 #define ITEMS_BASECORO_H
 
-#include "builder.h"
-#include "module_state.h"
+#define SPECIFIC_ITEMS_CMP(prefix, path) \
+	PyObject_RichCompareBool((path), (prefix), Py_EQ)
+
+#include "items_common.h"
+
+#undef SPECIFIC_ITEMS_CMP
 
 /**
  * items_basecoro coroutine object structure
  */
-typedef struct {
-    PyObject_HEAD
-    builder_t builder;
-    PyObject *target_send;
-    PyObject *prefix;
-    int object_depth;
-    yajl2_state *module_state;
-} ItemsBasecoro;
+typedef ItemsCommonBasecoro ItemsBasecoro;
 
 /**
  * items_basecoro coroutine object type
