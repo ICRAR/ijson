@@ -14,7 +14,7 @@ jobs:
     name: Calculate OS/archs to build wheels on
     runs-on: ubuntu-latest
     env:
-      BUILD_TYPE: ${{ (startsWith(github.event.ref, 'refs/tags/v') || github.event.schedule == '0 0 * * 6') && 'FULL' || 'BASE' }}
+      BUILD_TYPE: ${{ (startsWith(github.event.ref, 'refs/tags/v') || startsWith(github.event.ref, 'refs/heads/fullci_') || github.event.schedule == '0 0 * * 6') && 'FULL' || 'BASE' }}
       ARCHS_LINUX_BASE: '["x86_64"]'
       ARCHS_LINUX_FULL: '["x86_64", "i686", "aarch64"]'
       ARCHS_MACOS_BASE: '["x86_64"]'
