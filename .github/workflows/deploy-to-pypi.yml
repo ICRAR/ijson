@@ -32,7 +32,7 @@ jobs:
           import os
 
           combinations = (
-              ("ubuntu-latest", "ARCHS_LINUX"),
+              ("ubuntu-22.04", "ARCHS_LINUX"),
               ("macos-14", "ARCHS_MACOS"),
               ("windows-2019", "ARCHS_WINDOWS"),
           )
@@ -62,7 +62,7 @@ jobs:
           submodules: true
 
       - uses: docker/setup-qemu-action@v3
-        if: ${{ matrix.arch == 'aarch64' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.arch == 'aarch64' && matrix.os == 'ubuntu-22.04' }}
         name: Set up QEMU
 
       - name: Build wheels
