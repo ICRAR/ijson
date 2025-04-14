@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-2019, macos-14]
-        python_version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - os: ubuntu-latest
             python_version: "pypy3.10"
@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python_version }}
 
       - name: Install build test dependencies
-        run: pip install setuptools
+        run: pip install build
 
       - name: Install Yajl
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -41,7 +41,7 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: python setup.py develop
+        run: python -m build
 
       - name: Install test dependencies
         run: pip install -r test-requirements.txt

@@ -1,54 +1,13 @@
-try:
-    from distutils import ccompiler
-    from distutils import sysconfig
-except ImportError:
-    from setuptools._distutils import ccompiler
-    from setuptools._distutils import sysconfig
-
 import glob
 import os
-import platform
 import shutil
 import tempfile
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
+from setuptools._distutils import ccompiler
+from setuptools._distutils import sysconfig
 
-def get_ijson_version():
-    """Get version from code without fully importing it"""
-    _globals = {}
-    with open(os.path.join('src', 'ijson', 'version.py')) as f:
-        code = f.read()
-    exec(code, _globals)
-    return _globals['__version__']
-
-setupArgs = dict(
-    name = 'ijson',
-    version = get_ijson_version(),
-    author = 'Rodrigo Tobar, Ivan Sagalaev',
-    author_email = 'rtobar@icrar.org, maniac@softwaremaniacs.org',
-    url = 'https://github.com/ICRAR/ijson',
-    license = 'BSD',
-    description = 'Iterative JSON parser with standard Python iterator interfaces',
-    long_description = open('README.rst').read(),
-    long_description_content_type = 'text/x-rst',
-
-    classifiers = [
-        'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3.13',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    packages = find_packages(where="src"),
-    package_dir={"": "src"},
-    python_requires=">=3.8",
-)
+setupArgs = {}
 
 # Check if the yajl library + headers are present
 # We don't use compiler.has_function because it leaves a lot of files behind

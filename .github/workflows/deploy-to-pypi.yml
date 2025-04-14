@@ -79,7 +79,7 @@ jobs:
           # Our C extension made PyPy < 7.3.13 crash (a bug on their end)
           # it doesn't make sense to build wheels for platforms not supported
           # not supported by that version
-          CIBW_SKIP: pp{37,38,39}*
+          CIBW_SKIP: pp{39}*
           CIBW_ENABLE: pypy cpython-freethreading
 
       - uses: actions/upload-artifact@v4
