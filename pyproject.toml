@@ -31,8 +31,5 @@ dynamic = ["version"]
 [tool.setuptools.dynamic]
 version = { attr = "ijson.version.__version__" }
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.setuptools.exclude-package-data]
 "ijson.backends.ext._yajl2" = ["*.c", "*.h"]
