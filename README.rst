@@ -143,8 +143,6 @@ using the ``basic_parse`` function:
                     if event == 'map_key' and value == 'name')
 
 
-.. _command_line:
-
 Command line
 ------------
 
@@ -174,8 +172,6 @@ For example::
 
 Using ``-h/--help`` will show all available options.
 
-
-.. _benchmarking:
 
 Benchmarking
 ------------
@@ -354,8 +350,6 @@ like this:
    process_accumulated_events(events)
 
 
-.. _options:
-
 Options
 =======
 
@@ -423,8 +417,6 @@ Events will be one of the following:
   all indicate actual content, which is stored in the associated value.
 
 
-.. _prefix:
-
 Prefix
 ======
 
@@ -445,8 +437,6 @@ When using the ``ijson.items`` function,
 the prefix works as the selection
 for which objects should be automatically built and returned by ijson.
 
-
-.. _backends:
 
 Backends
 ========
@@ -493,8 +483,6 @@ to get a specific backend based on a name:
     for item in backend.items(...):
         # ...
 
-
-.. _capabilities:
 
 Capabilities
 ------------
@@ -555,8 +543,6 @@ The benchmarking_ tool should help
 with trying some of these options
 and observing their effect on your input files.
 
-
-.. _faq:
 
 FAQ
 ===
