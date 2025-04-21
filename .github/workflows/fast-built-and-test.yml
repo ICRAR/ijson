@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python_version }}
 
       - name: Install build test dependencies
-        run: pip install build
+        run: pip install setuptools
 
       - name: Install Yajl
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -41,7 +41,7 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: python -m build
+        run: python setup.py develop
 
       - name: Install test dependencies
         run: pip install -r test-requirements.txt
