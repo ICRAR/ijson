@@ -33,3 +33,41 @@ version = { attr = "ijson.version.__version__" }
 
 [tool.setuptools.exclude-package-data]
 "ijson.backends.ext._yajl2" = ["*.c", "*.h"]
+
+[tool.tox]
+requires = ["tox>=4.23"]
+env_list = [
+    "py39",
+    "py310",
+    "py311",
+    "py312",
+    "py313",
+    "py313t",
+    "py314",
+    "py314t",
+]
+
+[tool.tox.env_run_base]
+description = "Run unit tests with {base_python}"
+labels = ["test"]
+# YAJL_DLL can be used to manually point to a yajl installation
+passenv = ["YAJL_DLL"]
+commands = [["pytest", "-v"]]
+deps = ["-r test-requirements.txt"]
+
+[tool.tox.env.memleaks]
+description = "Run memory leak tests"
+labels = ["memleaks"]
+commands = [["pytest", "--memleaks-only"]]
+
+[tool.tox.env.benchmark]
+description = "Run benchmark"
+labels = ["benchmark"]
+commands = [["{env_python}", "-m", "ijson.benchmark", { replace = "posargs", extend = true }]]
+passenv = ["IJSON_BACKEND"]
+parallel_show_output = true
+
+[tool.tox.env.readme]
+description = "Converts README.rst to HTML"
+commands = [['rst2html5', "--strict", "README.rst", "--output=readme.html"]]
+deps = ["docutils", "Pygments"]

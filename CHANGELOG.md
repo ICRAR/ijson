@@ -2,6 +2,8 @@
 
 ## Development
 
+* Introdued `tox` for common task execution.
+
 ## [3.4.0]
 
 * Added support for PEP 489 multi-phase initialisation
