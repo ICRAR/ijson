@@ -28,9 +28,6 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
 
-      - name: Install build test dependencies
-        run: pip install setuptools
-
       - name: Install Yajl
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: sudo apt install libyajl-dev
@@ -38,7 +35,7 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: python setup.py develop
+        run: pip install .
 
       - name: Install test dependencies
         run: pip install -r test-requirements.txt
