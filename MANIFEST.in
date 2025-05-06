@@ -3,5 +3,5 @@ include README.rst
 include CHANGELOG.md
 graft src/ijson/backends/ext/
 graft tests
-graft yajl/
+graft yajl-patched-sources/
 global-exclude *.pyc
