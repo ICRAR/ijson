@@ -1,54 +1,13 @@
-try:
-    from distutils import ccompiler
-    from distutils import sysconfig
-except ImportError:
-    from setuptools._distutils import ccompiler
-    from setuptools._distutils import sysconfig
-
 import glob
 import os
-import platform
 import shutil
 import tempfile
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
+from setuptools._distutils import ccompiler
+from setuptools._distutils import sysconfig
 
-def get_ijson_version():
-    """Get version from code without fully importing it"""
-    _globals = {}
-    with open(os.path.join('src', 'ijson', 'version.py')) as f:
-        code = f.read()
-    exec(code, _globals)
-    return _globals['__version__']
-
-setupArgs = dict(
-    name = 'ijson',
-    version = get_ijson_version(),
-    author = 'Rodrigo Tobar, Ivan Sagalaev',
-    author_email = 'rtobar@icrar.org, maniac@softwaremaniacs.org',
-    url = 'https://github.com/ICRAR/ijson',
-    license = 'BSD',
-    description = 'Iterative JSON parser with standard Python iterator interfaces',
-    long_description = open('README.rst').read(),
-    long_description_content_type = 'text/x-rst',
-
-    classifiers = [
-        'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3.13',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    packages = find_packages(where="src"),
-    package_dir={"": "src"},
-    python_requires=">=3.8",
-)
+setupArgs = {}
 
 # Check if the yajl library + headers are present
 # We don't use compiler.has_function because it leaves a lot of files behind
@@ -89,17 +48,32 @@ def yajl_present():
         os.remove(yajl_version_test_file.name)
 
 
-def patch_yajl_sources():
+ORIGINAL_SOURCES = os.path.join("cextern", "yajl")
+PATCHED_SOURCES = "yajl-patched-sources"
+
+
+def patch_yajl_sources() -> None:
     """Make yajl sources ready for direct compilation against them"""
     # cp cextern/yajl -R $yajl_sources_copy
     # mkdir $yajl_sources_copy/yajl
     # cp $yajl_sources_copy/src/api/*.h $yajl_sources_copy/yajl
-    patched_sources = os.path.join(tempfile.mkdtemp(), 'yajl')
-    shutil.copytree(os.path.join('cextern', 'yajl'), patched_sources)
-    headers_original = os.path.join(patched_sources, 'src', 'api')
-    headers_copy = os.path.join(patched_sources, 'yajl')
+    if os.path.isdir(PATCHED_SOURCES):
+        if os.path.isdir(ORIGINAL_SOURCES):
+            print("Folder for yajl sources already exists, removing it")
+            shutil.rmtree(PATCHED_SOURCES)
+        else:
+            # Wheels are build in an isolated environment
+            # where the original sources aren't available
+            print("Yajl Sources are already in the correct place. Skip copy")
+            return
+    print(f"Copy yajl sources to '{PATCHED_SOURCES}'")
+    shutil.copytree(
+        ORIGINAL_SOURCES, PATCHED_SOURCES,
+        ignore=shutil.ignore_patterns("example", "test"),
+    )
+    headers_original = os.path.join(PATCHED_SOURCES, "src", "api")
+    headers_copy = os.path.join(PATCHED_SOURCES, "yajl")
     shutil.copytree(headers_original, headers_copy)
-    return patched_sources
 
 
 extra_sources = []
@@ -109,10 +83,10 @@ embed_yajl = os.environ.get('IJSON_EMBED_YAJL', None) == '1'
 if not embed_yajl:
     have_yajl = yajl_present()
 else:
-    yajl_sources = patch_yajl_sources()
-    extra_sources = sorted(glob.glob(os.path.join(yajl_sources, 'src', '*.c')))
-    extra_sources.remove(os.path.join(yajl_sources, 'src', 'yajl_version.c'))
-    extra_include_dirs = [yajl_sources, os.path.join(yajl_sources, 'src')]
+    patch_yajl_sources()
+    extra_sources = sorted(glob.glob(os.path.join(PATCHED_SOURCES, 'src', '*.c')))
+    extra_sources.remove(os.path.join(PATCHED_SOURCES, 'src', 'yajl_version.c'))
+    extra_include_dirs = [PATCHED_SOURCES, os.path.join(PATCHED_SOURCES, 'src')]
     libs = []
 build_yajl_default = '1' if embed_yajl or have_yajl else '0'
 build_yajl = os.environ.get('IJSON_BUILD_YAJL2C', build_yajl_default) == '1'
