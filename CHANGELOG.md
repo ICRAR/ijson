@@ -2,6 +2,8 @@
 
 ## Development
 
+## [3.4.0]
+
 * Added support for PEP 489 multi-phase initialisation
   and per-module state for our C extension,
   allowing us to support sub-interpreters with per-interpreter GIL.
@@ -381,3 +383,4 @@
 [3.2.2]: https://github.com/ICRAR/ijson/releases/tag/v3.2.2
 [3.2.3]: https://github.com/ICRAR/ijson/releases/tag/v3.2.3
 [3.3.0]: https://github.com/ICRAR/ijson/releases/tag/v3.3.0
+[3.4.0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0
