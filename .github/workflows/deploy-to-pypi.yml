@@ -34,7 +34,7 @@ jobs:
           combinations = (
               ("ubuntu-22.04", "ARCHS_LINUX"),
               ("macos-14", "ARCHS_MACOS"),
-              ("windows-2019", "ARCHS_WINDOWS"),
+              ("windows-2025", "ARCHS_WINDOWS"),
           )
           build_type = os.getenv("BUILD_TYPE")
           includes = [
