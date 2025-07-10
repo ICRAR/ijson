@@ -15,8 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ (startsWith(github.event.ref, 'refs/tags/v') || startsWith(github.event.ref, 'refs/heads/fullci_') || github.event.schedule == '0 0 * * 6') && 'FULL' || 'BASE' }}
-      ARCHS_LINUX_BASE: '["x86_64"]'
-      ARCHS_LINUX_FULL: '["x86_64", "i686", "aarch64"]'
+      ARCHS_LINUX_INTEL_BASE: '["x86_64"]'
+      ARCHS_LINUX_INTEL_FULL: '["x86_64", "i686"]'
+      ARCHS_LINUX_ARM_BASE: '["aarch64"]'
+      ARCHS_LINUX_ARM_FULL: '["aarch64"]'
       ARCHS_MACOS_BASE: '["x86_64"]'
       ARCHS_MACOS_FULL: '["x86_64", "arm64", "universal2"]'
       ARCHS_WINDOWS_BASE: '["AMD64"]'
@@ -32,7 +34,8 @@ jobs:
           import os
 
           combinations = (
-              ("ubuntu-22.04", "ARCHS_LINUX"),
+              ("ubuntu-24.04", "ARCHS_LINUX_INTEL"),
+              ("ubuntu-24.04-arm", "ARCHS_LINUX_ARM"),
               ("macos-14", "ARCHS_MACOS"),
               ("windows-2025", "ARCHS_WINDOWS"),
           )
@@ -60,10 +63,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: true
-
-      - uses: docker/setup-qemu-action@v3
-        if: ${{ matrix.arch == 'aarch64' && matrix.os == 'ubuntu-22.04' }}
-        name: Set up QEMU
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.1.3

@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-2025, macos-14]
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-2025, macos-14]
         python_version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14-dev"]
         include:
           - os: ubuntu-latest
