@@ -75,7 +75,7 @@ High-level interfaces
 ---------------------
 
 Most common usage is having ijson yield native Python objects out of a JSON
-stream located under a prefix.
+stream (file-like object) located under a prefix.
 This is done using the ``items`` function.
 Here's how to process all European cities:
 
@@ -204,6 +204,23 @@ These are then internally wrapped into a file object,
 and further processed.
 This is useful for testing and prototyping,
 but probably not extremely useful in real-life scenarios.
+
+
+``requests`` lib support
+-------------------------
+
+As ijson methods expect a file-like object, you can just use `Response.raw`:
+
+.. code-block:: python
+
+    import ijson
+    import requests
+
+    response = requests.get('http://.../', stream=True)
+    objects = ijson.items(response.raw, 'earth.europe.item')
+    cities = (o for o in objects if o['type'] == 'city')
+    for city in cities:
+        do_something_with(city)
 
 
 ``asyncio`` support
