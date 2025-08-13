@@ -74,8 +74,18 @@ objects:
 High-level interfaces
 ---------------------
 
-Most common usage is having ijson yield native Python objects out of a JSON
-stream located under a prefix.
+ijson works by continuously reading data from a JSON stream provided by the user.
+This is presented as a file-like object.
+In particular it must provide a ``read(size)`` method
+returning either ``bytes`` (preferably) or ``str``.
+Example file-like objects are
+files opened with ``open``,
+HTTP/HTTPS requests made using ``urllib.request.urlopen``,
+``socket.socket`` objects,
+and more.
+
+The most common usage of ijson is to yield native Python objects
+located under a prefix.
 This is done using the ``items`` function.
 Here's how to process all European cities:
 
@@ -204,6 +214,19 @@ These are then internally wrapped into a file object,
 and further processed.
 This is useful for testing and prototyping,
 but probably not extremely useful in real-life scenarios.
+
+
+Iterator support
+----------------
+
+In many situations the direct input users want to pass to ijson
+is an iterator (e.g., a generator) rather than a file-like object.
+To bridge this gap users need to adapt the iterator into a file-like object.
+Examples of this can be found
+`here <https://github.com/ICRAR/ijson/issues/44#issuecomment-1771013830>`__
+and `here <https://github.com/ICRAR/ijson/issues/58#issuecomment-917655522>`__.
+Future versions of ijson might provide built-in adapters for this,
+and/or support iterators without the need to adapt them first.
 
 
 ``asyncio`` support
@@ -611,6 +634,24 @@ FAQ
    containing multiple values, and is *usually* solved
    by passing the ``multiple_values=True`` to the ijson function in use.
    See the options_ section for details.
+
+#. How do I use ijson with the ``requests`` library
+
+   The ``requests`` library downloads the body of the HTTP response immediately by default.
+   Users wanting to feed the response into ijson
+   will need to override this behaviour
+   by using the ``requests.get(..., stream=True)`` parameter.
+   Then they have at least two options:
+
+   * Wrap the ``Response.iter_content()`` iterator into a file-like object,
+     then give that to ijson.
+
+   * Pass the ``Response.raw`` object (the underlying ``socket.socket``) to ijson.
+
+   The first alternative is best, since ``requests`` will automatically decode
+   any HTTP transfer encodings, which doesn't happen with ``Response.raw``.
+   See `Iterator support`_ for how to wrap ``Response.iter_content()``
+   into a file-like object.
 
 
 Acknowledgements
