@@ -221,12 +221,10 @@ Iterator support
 
 In many situations the direct input users want to pass to ijson
 is an iterator (e.g., a generator) rather than a file-like object.
-To bridge this gap users need to adapt the iterator into a file-like object.
-Examples of this can be found
-`here <https://github.com/ICRAR/ijson/issues/44#issuecomment-1771013830>`__
-and `here <https://github.com/ICRAR/ijson/issues/58#issuecomment-917655522>`__.
-Future versions of ijson might provide built-in adapters for this,
-and/or support iterators without the need to adapt them first.
+ijson provides built-in adapters to bridge this gap:
+
+- ``ijson.from_iter(iterable_of_bytes)``
+- ``ijson.from_aiter(async_iterable_of_bytes)``
 
 
 ``asyncio`` support
@@ -635,23 +633,42 @@ FAQ
    by passing the ``multiple_values=True`` to the ijson function in use.
    See the options_ section for details.
 
-#. How do I use ijson with the ``requests`` library
+#. **Q**: How do I use ijson with ``requests`` or ``httpx`` 
 
    The ``requests`` library downloads the body of the HTTP response immediately by default.
-   Users wanting to feed the response into ijson
-   will need to override this behaviour
-   by using the ``requests.get(..., stream=True)`` parameter.
-   Then they have at least two options:
+   To stream JSON into ijson, pass ``stream=True`` and adapt the byte iterator:
 
-   * Wrap the ``Response.iter_content()`` iterator into a file-like object,
-     then give that to ijson.
+   .. code-block:: python
 
-   * Pass the ``Response.raw`` object (the underlying ``socket.socket``) to ijson.
+       import requests
+       import ijson
 
-   The first alternative is best, since ``requests`` will automatically decode
-   any HTTP transfer encodings, which doesn't happen with ``Response.raw``.
-   See `Iterator support`_ for how to wrap ``Response.iter_content()``
-   into a file-like object.
+       with requests.get('https://jsonplaceholder.typicode.com/posts', stream=True) as resp:
+           resp.raise_for_status()
+           f = ijson.from_iter(resp.iter_content(chunk_size=64*1024))
+           for post in ijson.items(f, 'item'):
+              print(f"post id = {post['id']}, \t title: {post['title']}")
+
+   You can also pass ``Response.raw`` directly (it's a file-like object),
+   but using ``iter_content`` is preferred because ``requests`` will transparently
+   handle HTTP transfer encodings (e.g., gzip, chunked).
+
+
+   For async usage with ``httpx``: 
+
+   .. code-block:: python
+
+       import httpx, ijson, asyncio
+
+       async def main():
+           async with httpx.AsyncClient() as client:
+               async with client.stream('GET', 'https://jsonplaceholder.typicode.com/posts') as resp:
+                   resp.raise_for_status()
+                   f = ijson.from_aiter(resp.aiter_bytes())
+                   async for item in ijson.items(f, 'item'):
+                      print(f"post id = {post['id']}, \t title: {post['title']}")
+
+       asyncio.run(main())
 
 
 Acknowledgements
