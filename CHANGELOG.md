@@ -4,6 +4,10 @@
 
 * Introdued `tox` for common task execution.
 
+## [3.4.0.post0]
+
+* Post-release to get 3.14 wheels built on published on PyPI.
+
 ## [3.4.0]
 
 * Added support for PEP 489 multi-phase initialisation
@@ -386,3 +390,4 @@
 [3.2.3]: https://github.com/ICRAR/ijson/releases/tag/v3.2.3
 [3.3.0]: https://github.com/ICRAR/ijson/releases/tag/v3.3.0
 [3.4.0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0
+[3.4.0.post0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0.post0
