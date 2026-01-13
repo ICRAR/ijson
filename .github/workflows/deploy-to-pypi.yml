@@ -65,7 +65,7 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.0
+        uses: pypa/cibuildwheel@v3.3.1
         with:
           output-dir: wheelhouse
         env:
