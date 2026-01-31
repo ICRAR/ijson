@@ -1,4 +1,4 @@
-from typing import AsyncIterable, AsyncIterator, Iterable, Iterator
+from typing import AsyncIterable, AsyncIterator, Iterable, Iterator, Union, overload
 
 from ijson import compat
 
@@ -42,11 +42,16 @@ class AiterReader:
         return chunk
 
 
+@overload
+def from_iter(byte_iter: AsyncIterable[bytes]) -> AiterReader:
+    ...
+
+@overload
 def from_iter(byte_iter: Iterable[bytes]) -> IterReader:
-    """Convert a synchronous byte iterable to a file-like object."""
+    ...
+
+def from_iter(byte_iter: Union[Iterable[bytes], AsyncIterable[bytes]]) -> Union[IterReader, AiterReader]:
+    """Convert a byte iterable (sync or async) to a file-like object."""
+    if hasattr(byte_iter, "__aiter__"):
+        return AiterReader(aiter(byte_iter))
     return IterReader(iter(byte_iter))
-
-
-def from_aiter(byte_aiter: AsyncIterable[bytes]) -> AiterReader:
-    """Convert an asynchronous byte iterable to an async file-like object."""
-    return AiterReader(aiter(byte_aiter))

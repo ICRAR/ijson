@@ -29,13 +29,13 @@ def test_from_iter_accepts_iterable():
     assert file_obj.read(1) == b""
 
 
-def test_from_aiter_read0_does_not_consume():
+def test_from_iter_accepts_aiterable():
     async def chunks():
         yield b'{"key":'
         yield b'"value"}'
 
     async def main():
-        file_obj = ijson.from_aiter(chunks())
+        file_obj = ijson.from_iter(chunks())
         assert await file_obj.read(0) == b""
         assert await file_obj.read(1) == b'{"key":'
         assert await file_obj.read(1) == b'"value"}'

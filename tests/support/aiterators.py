@@ -15,7 +15,7 @@ def get_all(routine, json_content, *args, **kwargs):
     events = []
 
     async def run():
-        reader = ijson.from_aiter(_async_chunks(json_content))
+        reader = ijson.from_iter(_async_chunks(json_content))
         async for event in routine(reader, *args, **kwargs):
             events.append(event)
 
