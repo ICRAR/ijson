@@ -22,7 +22,9 @@ _available_backends = _get_available_backends()
 class InputType(enum.Enum):
     ASYNC_FILE = enum.auto()
     ASYNC_TYPES_COROUTINES_FILE = enum.auto()
+    ASYNC_ITERABLE = enum.auto()
     FILE = enum.auto()
+    ITERABLE = enum.auto()
     SENDABLE = enum.auto()
 
 
@@ -50,8 +52,10 @@ class BackendAdaptor:
 
 from .support.async_ import get_all as get_all_async
 from .support.async_types_coroutines import get_all as get_all_async_types_coroutines
+from .support.aiterators import get_all as get_all_async_iterable
 from .support.coroutines import get_all as get_all_coro
 from .support.generators import get_all as get_all_gen
+from .support.iterators import get_all as get_all_iterable
 
 _pull_backend_adaptors = [
     backend_adaptor
@@ -59,7 +63,9 @@ _pull_backend_adaptors = [
     for backend_adaptor in [
         BackendAdaptor(backend, InputType.ASYNC_FILE, "_async", get_all_async),
         BackendAdaptor(backend, InputType.ASYNC_TYPES_COROUTINES_FILE, "_async", get_all_async_types_coroutines),
+        BackendAdaptor(backend, InputType.ASYNC_ITERABLE, "_async", get_all_async_iterable),
         BackendAdaptor(backend, InputType.FILE, "_gen", get_all_gen),
+        BackendAdaptor(backend, InputType.ITERABLE, "_gen", get_all_iterable),
     ]
 ]
 
