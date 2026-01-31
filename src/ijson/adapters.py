@@ -2,6 +2,22 @@ from typing import AsyncIterable, AsyncIterator, Iterable, Iterator, Union, over
 
 from ijson import compat
 
+try:  # Py>=3.10
+    from builtins import aiter, anext
+except ImportError:  # Py<3.10
+    _MISSING = object()
+
+    def aiter(obj):
+        return obj.__aiter__()
+
+    async def anext(ait, default=_MISSING):
+        try:
+            return await ait.__anext__()
+        except StopAsyncIteration:
+            if default is _MISSING:
+                raise
+            return default
+
 
 def _to_bytes(chunk, warned: bool):
     if isinstance(chunk, bytes):
