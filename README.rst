@@ -221,10 +221,9 @@ Iterator support
 
 In many situations the direct input users want to pass to ijson
 is an iterator (e.g., a generator) rather than a file-like object.
-ijson provides built-in adapters to bridge this gap:
+ijson provides a built-in adapter to bridge this gap:
 
-- ``ijson.from_iter(iterable_of_bytes)``
-- ``ijson.from_aiter(async_iterable_of_bytes)``
+- ``ijson.from_iter(iterable_or_async_iterable_of_bytes)``
 
 
 ``asyncio`` support
@@ -635,19 +634,21 @@ FAQ
 
 #. **Q**: How do I use ijson with ``requests`` or ``httpx`` 
 
-   The ``requests`` library downloads the body of the HTTP response immediately by default.
+   **A**: The ``requests`` library downloads the body of the HTTP response immediately by default.
    To stream JSON into ijson, pass ``stream=True`` and adapt the byte iterator:
 
    .. code-block:: python
 
-       import requests
-       import ijson
+      import requests
+      import ijson
 
-       with requests.get('https://jsonplaceholder.typicode.com/posts', stream=True) as resp:
-           resp.raise_for_status()
-           f = ijson.from_iter(resp.iter_content(chunk_size=64*1024))
-           for post in ijson.items(f, 'item'):
-              print(f"post id = {post['id']}, \t title: {post['title']}")
+      with requests.get('https://..', stream=True) as resp:
+          resp.raise_for_status()
+          f = ijson.from_iter(resp.iter_content(chunk_size=64*1024))
+          objects = ijson.items(f, 'earth.europe.item')
+          cities = (o for o in objects if o['type'] == 'city')
+          for city in cities:
+            do_something_with(city)
 
    You can also pass ``Response.raw`` directly (it's a file-like object),
    but using ``iter_content`` is preferred because ``requests`` will transparently
@@ -658,17 +659,17 @@ FAQ
 
    .. code-block:: python
 
-       import httpx, ijson, asyncio
+      import httpx
+      import ijson 
 
-       async def main():
-           async with httpx.AsyncClient() as client:
-               async with client.stream('GET', 'https://jsonplaceholder.typicode.com/posts') as resp:
-                   resp.raise_for_status()
-                   f = ijson.from_aiter(resp.aiter_bytes())
-                   async for item in ijson.items(f, 'item'):
-                      print(f"post id = {post['id']}, \t title: {post['title']}")
-
-       asyncio.run(main())
+      async with httpx.AsyncClient() as client:
+          async with client.stream('GET', 'https://..') as resp:
+              resp.raise_for_status()
+              f = ijson.from_iter(resp.aiter_bytes())
+              objects = ijson.items(f, 'earth.europe.item')
+              cities = (o for o in objects if o['type'] == 'city')
+              for city in cities:
+                do_something_with(city)
 
 
 Acknowledgements
