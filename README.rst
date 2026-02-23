@@ -667,8 +667,8 @@ FAQ
               resp.raise_for_status()
               f = ijson.from_iter(resp.aiter_bytes())
               objects = ijson.items(f, 'earth.europe.item')
-              cities = (o for o in objects if o['type'] == 'city')
-              for city in cities:
+              cities = (o async for o in objects if o['type'] == 'city')
+              async for city in cities:
                 do_something_with(city)
 
 

@@ -1,8 +1,6 @@
-from typing import AsyncIterable, AsyncIterator, Iterable, Iterator, Union, overload
-
 from ijson import compat
 
-try:  # Py>=3.10
+try:
     from builtins import aiter, anext
 except ImportError:  # Py<3.10
     _MISSING = object()
@@ -33,7 +31,7 @@ def _to_bytes(chunk, warned: bool):
 class IterReader:
     """File-like object backed by a byte iterator."""
 
-    def __init__(self, byte_iter: Iterator[bytes]):
+    def __init__(self, byte_iter):
         self._iter = byte_iter
         self._warned = False
 
@@ -47,7 +45,7 @@ class IterReader:
 class AiterReader:
     """Async file-like object backed by an async byte iterator."""
 
-    def __init__(self, byte_aiter: AsyncIterator[bytes]):
+    def __init__(self, byte_aiter):
         self._aiter = byte_aiter
         self._warned = False
 
@@ -58,15 +56,7 @@ class AiterReader:
         return chunk
 
 
-@overload
-def from_iter(byte_iter: AsyncIterable[bytes]) -> AiterReader:
-    ...
-
-@overload
-def from_iter(byte_iter: Iterable[bytes]) -> IterReader:
-    ...
-
-def from_iter(byte_iter: Union[Iterable[bytes], AsyncIterable[bytes]]) -> Union[IterReader, AiterReader]:
+def from_iter(byte_iter):
     """Convert a byte iterable (sync or async) to a file-like object."""
     if hasattr(byte_iter, "__aiter__"):
         return AiterReader(aiter(byte_iter))

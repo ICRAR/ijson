@@ -1,15 +1,5 @@
 import asyncio
 import ijson
-import pytest
-
-from .test_base import JSON
-
-CHUNK_SIZE = 10
-
-
-@pytest.fixture
-def chunks():
-    return [JSON[i : i + CHUNK_SIZE] for i in range(0, len(JSON), CHUNK_SIZE)]
 
 
 def test_from_iter_read0_does_not_consume():
