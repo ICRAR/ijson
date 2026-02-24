@@ -632,7 +632,7 @@ FAQ
    by passing the ``multiple_values=True`` to the ijson function in use.
    See the options_ section for details.
 
-#. **Q**: How do I use ijson with ``requests`` or ``httpx`` 
+#. **Q**: How do I use ijson with ``requests`` or ``httpx``
 
    **A**: The ``requests`` library downloads the body of the HTTP response immediately by default.
    To stream JSON into ijson, pass ``stream=True`` and adapt the byte iterator:
@@ -655,12 +655,12 @@ FAQ
    handle HTTP transfer encodings (e.g., gzip, chunked).
 
 
-   For async usage with ``httpx``: 
+   For async usage with ``httpx``:
 
    .. code-block:: python
 
       import httpx
-      import ijson 
+      import ijson
 
       async with httpx.AsyncClient() as client:
           async with client.stream('GET', 'https://..') as resp:
