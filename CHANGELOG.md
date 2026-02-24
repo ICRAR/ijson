@@ -2,6 +2,8 @@
 
 ## Development
 
+## [3.5.0]
+
 * Added input iterator support via the new `ijson.from_iter` adapter.
   It allows users to easily consume iterators and async iterators,
   with common examples being HTTP stream responses
@@ -395,3 +397,4 @@
 [3.3.0]: https://github.com/ICRAR/ijson/releases/tag/v3.3.0
 [3.4.0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0
 [3.4.0.post0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0.post0
+[3.5.0]: https://github.com/ICRAR/ijson/releases/tag/v3.5.0
