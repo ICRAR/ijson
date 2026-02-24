@@ -2,6 +2,10 @@
 
 ## Development
 
+* Added input iterator support via the new `ijson.from_iter` adapter.
+  It allows users to easily consume iterators and async iterators,
+  with common examples being HTTP stream responses
+  as modelled by the `requests` and `httpx` libraries.
 * Introdued `tox` for common task execution.
 
 ## [3.4.0.post0]
