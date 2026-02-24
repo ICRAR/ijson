@@ -13,6 +13,7 @@ Top-level ``ijson`` module exposes method from the pure Python backend. There's
 also two other backends using the C library yajl in ``ijson.backends`` that have
 the same API and are faster under CPython.
 '''
+from ijson.adapters import from_iter
 from ijson.common import JSONError, IncompleteJSONError, ObjectBuilder
 
 from ijson.utils import coroutine, sendable_list
