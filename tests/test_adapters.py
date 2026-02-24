@@ -1,5 +1,6 @@
 import asyncio
 import ijson
+import pytest
 
 
 def test_from_iter_read0_does_not_consume():
@@ -11,9 +12,14 @@ def test_from_iter_read0_does_not_consume():
     assert file_obj.read(1) == b""
 
 
-def test_from_iter_accepts_iterable():
-    chunks = [b'{"key":', b'"value"}']
-    file_obj = ijson.from_iter(chunks)  # no iter(...)
+@pytest.mark.parametrize(
+    "chunks_factory",
+    [list, tuple, iter, lambda chunks: (chunk for chunk in chunks)],
+    ids=["list", "tuple", "iter", "generator"],
+)
+def test_from_iter_accepts_iterable(chunks_factory):
+    chunks = chunks_factory([b'{"key":', b'"value"}'])
+    file_obj = ijson.from_iter(chunks)
     assert file_obj.read(1) == b'{"key":'
     assert file_obj.read(1) == b'"value"}'
     assert file_obj.read(1) == b""
