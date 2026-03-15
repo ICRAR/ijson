@@ -215,41 +215,36 @@ def run_benchmarks(args, benchmark_func=None, fname=None):
 
 
 def main():
-    DEFAULT_N = 100000
-    DEFAULT_ITERATIONS = 1
-    DEFAULT_BUFSIZE = 64 * 1024
-    ALL_BENCHMARKS = ','.join(_benchmarks)
-    ALL_BACKENDS = ','.join(_backends)
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--size', type=int,
-        help='Size of JSON content; actual size in bytes might differ, defaults to %d' % DEFAULT_N,
-        default=DEFAULT_N)
+        help='Size of JSON content; actual size in bytes might differ, defaults to %(default)s',
+        default=100000)
     parser.add_argument('-I', '--iterations', type=int,
-        help='How many times each method should be tested, defaults to %d' % DEFAULT_ITERATIONS,
-        default=DEFAULT_ITERATIONS)
+        help='How many times each method should be tested, defaults to %(default)s',
+        default=1)
     parser.add_argument('-S', '--bufsize', type=int,
-        help='Buffer size used during parsing; defaults to %d' % DEFAULT_BUFSIZE,
-        default=DEFAULT_BUFSIZE)
+        help='Buffer size used during parsing; defaults to %(default)s',
+        default=64 * 1024)
     parser.add_argument('-b', '--benchmarks', type=parse_benchmarks,
-        help='Comma-separated list of benchmarks to include, defaults to %s' % ALL_BENCHMARKS,
-        default=ALL_BENCHMARKS)
+        help='Comma-separated list of benchmarks to include, defaults to %(default)s',
+        default=','.join(_benchmarks))
     parser.add_argument('-B', '--backends', type=parse_backends,
-        help='Comma-separated list of backends to include, defaults to %s' % ALL_BACKENDS,
-        default=ALL_BACKENDS)
+        help='Comma-separated list of backends to include, defaults to %(default)s',
+        default=','.join(_backends))
     parser.add_argument('-l', '--list', action='store_true',
         help='List available benchmarks and backends')
     parser.add_argument('inputs', nargs='*',
         help='File to use for benchmarks rather than built-in benchmarking functions')
-    parser.add_argument('-M', '--multiple-values', action='store_true', default=False,
+    parser.add_argument('-M', '--multiple-values', action='store_true',
         help='Content has multiple JSON values, useful when used with -i')
-    parser.add_argument('-f', '--use-float', action='store_true', default=False,
+    parser.add_argument('-f', '--use-float', action='store_true',
         help='Parse non-integer numbers as float instead of Decimal')
     parser.add_argument('-m', '--method', choices=['basic_parse', 'parse', 'kvitems', 'items'],
-                        help='The method to benchmark', default='basic_parse')
-    parser.add_argument('-c', '--coro', action='store_true', default=False,
-                        dest='run_coro', help='Benchmark coroutine methods')
-    parser.add_argument('-a', '--async', action='store_true', default=False,
-                        dest='run_async', help='Benchmark asyncio-enabled methods')
+        help='The method to benchmark, defaults to %(default)s', default='basic_parse')
+    parser.add_argument('-c', '--coro', action='store_true',
+        dest='run_coro', help='Benchmark coroutine methods')
+    parser.add_argument('-a', '--async', action='store_true',
+        dest='run_async', help='Benchmark asyncio-enabled methods')
     parser.add_argument('-p', '--prefix', help='Prefix (used with -M items|kvitems)', default='')
 
     args = parser.parse_args()
