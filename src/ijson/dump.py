@@ -6,7 +6,7 @@ import sys
 import ijson
 
 
-HEADERS = {
+METHODS_WITH_COLUMN_HEADERS = {
     'basic_parse': 'name, value',
     'parse': 'path, name, value',
     'kvitems': 'key, value',
@@ -19,10 +19,14 @@ def to_string(o):
     return str(o)
 
 def dump():
-    parser = argparse.ArgumentParser(description='Dump ijson events')
-    parser.add_argument('-m', '--method', choices=['basic_parse', 'parse', 'kvitems', 'items'],
-                        help='The method to use for dumping', default='basic_parse')
-    parser.add_argument('-p', '--prefix', help='Prefix (used with -M items|kvitems)', default='')
+    description = '''
+    Read JSON data from standard input, and dump
+    ijson events (using methods basic_parse or parse),
+    or content (using methods kvitems or items).'''
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-m', '--method', choices=METHODS_WITH_COLUMN_HEADERS,
+                        help='The method to use for dumping. Defaults to %(default)s', default='basic_parse')
+    parser.add_argument('-p', '--prefix', help='Prefix (used with -m items|kvitems)', default='')
     parser.add_argument('-M', '--multiple-values', help='Allow multiple values', action='store_true')
     args = parser.parse_args()
 
@@ -33,7 +37,7 @@ def dump():
         method_args = args.prefix,
     if args.multiple_values:
         method_kwargs['multiple_values'] = True
-    header = '#: ' + HEADERS[args.method]
+    header = '#: ' + METHODS_WITH_COLUMN_HEADERS[args.method]
     print(header)
     print('-' * len(header))
 
