@@ -23,6 +23,8 @@ jobs:
       ARCHS_MACOS_FULL: '["x86_64", "arm64", "universal2"]'
       ARCHS_WINDOWS_BASE: '["AMD64"]'
       ARCHS_WINDOWS_FULL: '["AMD64", "x86"]'
+      ARCHS_WINDOWS_ARM_BASE: '["ARM64"]'
+      ARCHS_WINDOWS_ARM_FULL: '["ARM64"]'
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -38,6 +40,7 @@ jobs:
               ("ubuntu-24.04-arm", "ARCHS_LINUX_ARM"),
               ("macos-14", "ARCHS_MACOS"),
               ("windows-2025", "ARCHS_WINDOWS"),
+              ("windows-11-arm", "ARCHS_WINDOWS_ARM"),
           )
           build_type = os.getenv("BUILD_TYPE")
           includes = [
