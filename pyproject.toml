@@ -79,7 +79,6 @@ before-test = "pip install -r test-requirements.txt"
 build-verbosity = 1
 enable = [
     "pypy",
-    "cpython-freethreading",
 ]
 # Our C extension made PyPy < 7.3.13 crash (a bug on their end)
 # it doesn't make sense to build wheels for platforms not supported by that version
