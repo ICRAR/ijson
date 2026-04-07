@@ -72,3 +72,22 @@ parallel_show_output = true
 description = "Converts README.rst to HTML"
 commands = [['rst2html5', "--strict", "README.rst", "--output=readme.html"]]
 deps = ["docutils", "Pygments"]
+
+[tool.cibuildwheel]
+before-all = "bash -c 'cd \"{project}\"; sh .github/tools/install_yajl.sh'"
+before-test = "pip install -r test-requirements.txt"
+build-verbosity = 1
+enable = [
+    "pypy",
+    "cpython-freethreading",
+]
+# Our C extension made PyPy < 7.3.13 crash (a bug on their end)
+# it doesn't make sense to build wheels for platforms not supported by that version
+skip = "pp{39}*"
+test-command = "pytest -vv {project}/tests"
+
+[tool.cibuildwheel.macos.environment]
+IJSON_EMBED_YAJL = "1"
+
+[tool.cibuildwheel.windows.environment]
+IJSON_EMBED_YAJL = "1"

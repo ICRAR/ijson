@@ -71,18 +71,6 @@ jobs:
         uses: pypa/cibuildwheel@v3.4.1
         with:
           output-dir: wheelhouse
-        env:
-          CIBW_BEFORE_ALL: "bash -c 'cd \"{project}\"; sh .github/tools/install_yajl.sh'"
-          CIBW_BUILD_VERBOSITY: 1
-          CIBW_ENVIRONMENT_MACOS: "IJSON_EMBED_YAJL=1"
-          CIBW_ENVIRONMENT_WINDOWS: "IJSON_EMBED_YAJL=1"
-          CIBW_BEFORE_TEST: pip install -r test-requirements.txt
-          CIBW_TEST_COMMAND: "bash -c 'cd \"{project}\"; pytest -vv'"
-          # Our C extension made PyPy < 7.3.13 crash (a bug on their end)
-          # it doesn't make sense to build wheels for platforms not supported
-          # not supported by that version
-          CIBW_SKIP: pp{39}*
-          CIBW_ENABLE: pypy cpython-freethreading
 
       - uses: actions/upload-artifact@v7
         with:
