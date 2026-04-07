@@ -82,7 +82,7 @@ enable = [
 ]
 # Our C extension made PyPy < 7.3.13 crash (a bug on their end)
 # it doesn't make sense to build wheels for platforms not supported by that version
-skip = "pp{39}*"
+skip = "pp39*"
 test-command = "pytest -vv {project}/tests"
 
 [tool.cibuildwheel.macos.environment]
