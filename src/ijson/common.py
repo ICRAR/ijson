@@ -113,28 +113,38 @@ class ObjectBuilder:
 
     '''
     def __init__(self, map_type=None):
-        def initial_set(value):
-            self.value = value
-        self.containers = [initial_set]
+        self.value = None
+        self.containers = []
         self.map_type = map_type or dict
+
+    def _add(self, value):
+        # Storing the in-progress containers themselves (rather than setter
+        # closures, which would reference back to self and create reference
+        # cycles) keeps the builder collectable by plain refcounting
+        if not self.containers:
+            self.value = value
+        else:
+            top = self.containers[-1]
+            if isinstance(top, list):
+                top.append(value)
+            else:
+                top[self.key] = value
 
     def event(self, event, value):
         if event == 'map_key':
             self.key = value
         elif event == 'start_map':
             mappable = self.map_type()
-            self.containers[-1](mappable)
-            def setter(value):
-                mappable[self.key] = value
-            self.containers.append(setter)
+            self._add(mappable)
+            self.containers.append(mappable)
         elif event == 'start_array':
             array = []
-            self.containers[-1](array)
-            self.containers.append(array.append)
+            self._add(array)
+            self.containers.append(array)
         elif event == 'end_array' or event == 'end_map':
             self.containers.pop()
         else:
-            self.containers[-1](value)
+            self._add(value)
 
 
 @utils.coroutine
@@ -156,7 +166,6 @@ def items_basecoro(target, prefix, map_type=None):
                         object_depth += 1
                     elif event in ('end_map', 'end_array'):
                         object_depth -= 1
-                del builder.containers[:]
                 target.send(builder.value)
             else:
                 target.send(value)
@@ -187,7 +196,6 @@ def kvitems_basecoro(target, prefix, map_type=None):
                     object_depth += 1
                 elif event == 'end_map':
                     object_depth -= 1
-            del builder.containers[:]
             target.send((key, builder.value))
 
 

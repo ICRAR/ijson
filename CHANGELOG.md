@@ -2,6 +2,15 @@
 
 ## Development
 
+* `ijson.common.ObjectBuilder` no longer creates internal reference
+  cycles, so discarded builders are freed by reference counting instead
+  of waiting for a cyclic garbage collection pass. This lowers peak
+  memory usage for code that builds and discards one large object at a
+  time. As a side effect, `builder.value` is now `None` before any
+  event is processed (previously accessing it raised `AttributeError`),
+  and the undocumented `containers` attribute holds the in-progress
+  containers rather than setter closures.
+
 ## [3.5.0]
 
 * Added input iterator support via the new `ijson.from_iter` adapter.

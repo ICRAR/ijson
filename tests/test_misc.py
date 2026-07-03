@@ -1,9 +1,14 @@
+import collections
+import gc
 import importlib.util
 import io
+import sys
+import weakref
 
 import pytest
 
 from ijson import common
+from ijson.common import ObjectBuilder
 
 from tests.test_base import JSON, JSON_EVENTS, JSON_PARSE_EVENTS, JSON_OBJECT,\
     JSON_KVITEMS
@@ -21,6 +26,87 @@ class TestMisc:
         if spec is None:
             pytest.skip("yajl2_c is not built")
         importlib.util.module_from_spec(spec)
+
+
+class TestObjectBuilder:
+    """Unit tests for the pure-python ObjectBuilder class"""
+
+    def test_initial_value_is_none(self):
+        assert ObjectBuilder().value is None
+
+    def test_builds_expected_value(self):
+        builder = ObjectBuilder()
+        for event, value in JSON_EVENTS:
+            builder.event(event, value)
+        assert builder.value == JSON_OBJECT
+
+    def test_custom_map_type(self):
+        builder = ObjectBuilder(map_type=collections.OrderedDict)
+        events = [
+            ('start_map', None),
+            ('map_key', 'a'),
+            ('start_map', None),
+            ('map_key', 'b'),
+            ('number', 1),
+            ('end_map', None),
+            ('map_key', 'c'),
+            ('start_array', None),
+            ('number', 2),
+            ('end_array', None),
+            ('end_map', None),
+        ]
+        for event, value in events:
+            builder.event(event, value)
+        assert builder.value == {'a': {'b': 1}, 'c': [2]}
+        assert type(builder.value) is collections.OrderedDict
+        assert type(builder.value['a']) is collections.OrderedDict
+
+    @pytest.mark.skipif(sys.implementation.name != "cpython",
+                        reason="deterministic refcounting is CPython-only")
+    # Each case guards a distinct cycle in the old implementation: nested_map
+    # and nested_array covered the per-container setter closures, scalar_only
+    # the initial_set closure created in __init__
+    @pytest.mark.parametrize("events", [
+        pytest.param([
+            ('start_map', None),
+            ('map_key', 'key'),
+            ('start_map', None),
+            ('map_key', 'inner'),
+            ('string', 'value'),
+            ('end_map', None),
+            ('end_map', None),
+        ], id="nested_map"),
+        pytest.param([
+            ('start_array', None),
+            ('number', 1),
+            ('start_array', None),
+            ('number', 2),
+            ('end_array', None),
+            ('end_array', None),
+        ], id="nested_array"),
+        pytest.param([
+            ('string', 'scalar'),
+        ], id="scalar_only"),
+    ])
+    def test_builder_freed_without_cyclic_gc(self, events):
+        """A discarded builder must be freed by refcounting alone.
+
+        The previous implementation stored setter closures in
+        self.containers; each closure referenced the builder, creating a
+        reference cycle that kept the builder (and the value being built)
+        alive until a cyclic GC pass."""
+        builder = ObjectBuilder()
+        for event, value in events:
+            builder.event(event, value)
+        ref = weakref.ref(builder)
+        gc_was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            del builder
+            assert ref() is None
+        finally:
+            if gc_was_enabled:
+                gc.enable()
 
 
 class TestMainEntryPoints:
