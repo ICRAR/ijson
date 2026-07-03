@@ -34,6 +34,17 @@ class TestObjectBuilder:
     def test_initial_value_is_none(self):
         assert ObjectBuilder().value is None
 
+    def test_value_available_during_construction(self):
+        builder = ObjectBuilder()
+        builder.event('start_map', None)
+        assert builder.value == {}
+        builder.event('map_key', 'a')
+        builder.event('string', 'value')
+        assert builder.value == {'a': 'value'}
+        builder.event('map_key', 'b')
+        builder.event('number', 1)
+        assert builder.value == {'a': 'value', 'b': 1}
+
     def test_builds_expected_value(self):
         builder = ObjectBuilder()
         for event, value in JSON_EVENTS:
