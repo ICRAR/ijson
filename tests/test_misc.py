@@ -74,9 +74,6 @@ class TestObjectBuilder:
 
     @pytest.mark.skipif(sys.implementation.name != "cpython",
                         reason="deterministic refcounting is CPython-only")
-    # Each case guards a distinct cycle in the old implementation: nested_map
-    # and nested_array covered the per-container setter closures, scalar_only
-    # the initial_set closure created in __init__
     @pytest.mark.parametrize("events", [
         pytest.param([
             ('start_map', None),
