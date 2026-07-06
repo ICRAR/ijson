@@ -2,7 +2,7 @@
 
 ## Development
 
-* `ijson.common.ObjectBuilder` no longer creates internal reference
+* The internal `ijson.common.ObjectBuilder` no longer creates internal reference
   cycles, so discarded builders are freed by reference counting instead
   of waiting for a cyclic garbage collection pass. This lowers peak
   memory usage for code that builds and discards one large object at a

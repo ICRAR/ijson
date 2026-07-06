@@ -98,6 +98,7 @@ class TestObjectBuilder:
         pytest.param([
             ('string', 'scalar'),
         ], id="scalar_only"),
+        pytest.param([], id="no_events"),
     ])
     def test_builder_freed_without_cyclic_gc(self, events):
         """A discarded builder must be freed by refcounting alone.
