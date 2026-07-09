@@ -34,7 +34,7 @@ def _memory_leak_detection():
 @pytest.mark.parametrize("exhaust", (True, False))
 @pytest.mark.parametrize("n", (100000,))
 @pytest.mark.parametrize("function",
-    (
+    [
         pytest.param(construction, id=name) for name, construction in
         {
             "basic_parse": lambda backend: backend.basic_parse_gen(io.BytesIO(b'[1, 2, 3, 4, 5]')),
@@ -42,7 +42,7 @@ def _memory_leak_detection():
             "items": lambda backend: backend.items_gen(io.BytesIO(b'[1, 2, 3, 4, 5]'), 'item'),
             "kvitems": lambda backend: backend.kvitems_gen(io.BytesIO(b'{"a": 0, "b": 1, "c": 2}'), ''),
         }.items()
-    )
+    ]
 )
 def test_generator(backend, function, n, exhaust):
     """Tests that running parse doesn't leak"""
@@ -51,7 +51,7 @@ def test_generator(backend, function, n, exhaust):
 
 @pytest.mark.parametrize("n", (100000,))
 @pytest.mark.parametrize("invalid_construction",
-    (
+    [
         pytest.param(construction, id=name) for name, construction in
         {
             "basic_parse": lambda backend: next(backend.basic_parse_gen(io.BytesIO(b'[1, 2, 3, 4, 5]'), not_a_kwarg=0)),
@@ -59,7 +59,7 @@ def test_generator(backend, function, n, exhaust):
             "items": lambda backend: next(backend.items_gen(io.BytesIO(b'[1, 2, 3, 4, 5]'), 'item', not_a_kwarg=0)),
             "kvitems": lambda backend: next(backend.kvitems_gen(io.BytesIO(b'{"a": 0, "b": 1, "c": 2}'), '', not_a_kwarg=0)),
         }.items()
-    )
+    ]
 )
 def test_erroneous_generator_construction(backend, invalid_construction, n):
     """Tests that running parse doesn't leak"""
@@ -71,7 +71,7 @@ def test_erroneous_generator_construction(backend, invalid_construction, n):
 
 @pytest.mark.parametrize("n", (100000,))
 @pytest.mark.parametrize("invalid_construction",
-    (
+    [
         pytest.param(construction, id=name) for name, construction in
         {
             "basic_parse": lambda backend: backend.basic_parse_async(b'[1, 2, 3, 4, 5]', not_a_kwarg=0),
@@ -79,7 +79,7 @@ def test_erroneous_generator_construction(backend, invalid_construction, n):
             "items": lambda backend: backend.items_async(b'[1, 2, 3, 4, 5]', 'item', not_a_kwarg=0),
             "kvitems": lambda backend: backend.kvitems_async(b'{"a": 0, "b": 1, "c": 2}', '', not_a_kwarg=0),
         }.items()
-    )
+    ]
 )
 def test_erroneous_async_construction(backend, n ,invalid_construction):
     def erroneous_async_construction():

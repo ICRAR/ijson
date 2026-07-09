@@ -11,6 +11,6 @@ def test_string_stream(adaptor):
 
 
 @pytest.mark.pull_only
-@pytest.mark.parametrize("buf_size", (2 ** exp for exp in range(0, 13, 2)))
+@pytest.mark.parametrize("buf_size", [2 ** exp for exp in range(0, 13, 2)])
 def test_different_buf_sizes(adaptor, buf_size):
     assert JSON_EVENTS == adaptor.basic_parse(JSON, buf_size=buf_size)
