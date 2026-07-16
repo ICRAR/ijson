@@ -13,7 +13,6 @@ authors = [
 ]
 classifiers = [
   'Development Status :: 5 - Production/Stable',
-  'Programming Language :: Python :: 3.9',
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
@@ -23,7 +22,7 @@ classifiers = [
   'Programming Language :: Python :: Implementation :: PyPy',
   'Topic :: Software Development :: Libraries :: Python Modules',
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 
 [project.urls]
@@ -38,7 +37,6 @@ version = { attr = "ijson.version.__version__" }
 [tool.tox]
 requires = ["tox>=4.23"]
 env_list = [
-    "py39",
     "py310",
     "py311",
     "py312",

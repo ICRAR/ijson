@@ -2,6 +2,8 @@
 
 ## Development
 
+* Removed support for Python < 3.10
+
 ## [3.5.1]
 
 * The internal `ijson.common.ObjectBuilder` no longer creates internal reference
