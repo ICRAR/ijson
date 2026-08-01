@@ -1,3 +1,4 @@
 pytest
-# cffi doesn't support ft 3.13 specifically
-cffi;python_version!="3.13"
+# Keep cffi away from 3.13+ until it gainst free-threaded wheels
+# otherwise the CI pipeline gets too complex
+cffi;python_version<"3.13"
