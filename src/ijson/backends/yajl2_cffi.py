@@ -117,7 +117,8 @@ def number(val, length):
 @ffi.callback('int(void *ctx, const unsigned char *stringVal, size_t stringLen)')
 @append_event_to_ctx('string')
 def string(val, length):
-    return ffi.string(val, maxlen=length).decode('utf-8')
+    # yajl gives an explicit length; ffi.string would stop at an embedded NUL
+    return ffi.buffer(val, length)[:].decode('utf-8')
 
 
 @ffi.callback('int(void *ctx)')
@@ -129,7 +130,7 @@ def start_map():
 @ffi.callback('int(void *ctx, const unsigned char *key, size_t stringLen)')
 @append_event_to_ctx('map_key')
 def map_key(key, length):
-    return ffi.string(key, maxlen=length).decode('utf-8')
+    return ffi.buffer(key, length)[:].decode('utf-8')
 
 
 @ffi.callback('int(void *ctx)')

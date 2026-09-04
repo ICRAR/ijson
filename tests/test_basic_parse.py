@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 from ijson import common
 
-from .test_base import ARRAY_JSON, ARRAY_JSON_EVENTS, INCOMPLETE_JSONS, INCOMPLETE_JSON_TOKENS, INVALID_JSONS, JSON, JSON_EVENTS, SCALAR_JSON, SURROGATE_PAIRS_JSON, STRINGS_JSON
+from .test_base import ARRAY_JSON, EMBEDDED_NUL_JSON, ARRAY_JSON_EVENTS, INCOMPLETE_JSONS, INCOMPLETE_JSON_TOKENS, INVALID_JSONS, JSON, JSON_EVENTS, SCALAR_JSON, SURROGATE_PAIRS_JSON, STRINGS_JSON
 
 
 def _raises_json_error(adaptor, json, **kwargs):
@@ -55,6 +55,12 @@ def test_surrogate_pairs(adaptor):
     event = adaptor.basic_parse(SURROGATE_PAIRS_JSON)[0]
     parsed_string = event[1]
     assert '💩' == parsed_string
+
+
+def test_embedded_nul(adaptor):
+    events = adaptor.basic_parse(EMBEDDED_NUL_JSON)
+    assert ('map_key', 'a\x00b') in events
+    assert ('string', 'c\x00d') in events
 
 
 def _get_numbers(adaptor, json, use_float):

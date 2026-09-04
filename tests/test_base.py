@@ -270,6 +270,7 @@ STRINGS_JSON = br'''
 }
 '''
 SURROGATE_PAIRS_JSON = br'"\uD83D\uDCA9"'
+EMBEDDED_NUL_JSON = br'{"a\u0000b": "c\u0000d"}'
 PARTIAL_ARRAY_JSONS = [
     (b'[1,', 1),
     (b'[1, 2 ', 1, 2),
