@@ -3,6 +3,7 @@
 ## Development
 
 * Removed support for Python < 3.10
+* Fixed treatment of null characters on strings (map keys and string values) on `cffi` backend (#178).
 
 ## [3.5.1]
 
