@@ -8,6 +8,10 @@ on:
   # 00:00 UTC every Saturday, don't bother anyone
   - cron: '0 0 * * 6'
 
+env:
+  UV_EXTRA_INDEX_URL: https://pypi.riseproject.dev/simple/
+  UV_INDEX_STRATEGY: unsafe-best-match
+
 jobs:
 
   fast_tests:
@@ -15,7 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-2025, macos-14]
+        os: [ubuntu-latest, ubuntu-24.04-arm, ubuntu-24.04-riscv, windows-2025, macos-14]
         python_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         include:
           - os: ubuntu-latest
@@ -26,9 +30,10 @@ jobs:
         with:
           submodules: true
 
-      - uses: actions/setup-python@v7
-        name: Install Python
+      - name: Python ${{ matrix.python_version }}
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
+          activate-environment: true
           python-version: ${{ matrix.python_version }}
 
       - name: Install Yajl
@@ -38,10 +43,10 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: pip install .
+        run: uv pip install .
 
       - name: Install test dependencies
-        run: pip install -r test-requirements.txt
+        run: uv pip install -r test-requirements.txt
 
       - name: Run unittests
         run: pytest -vv
