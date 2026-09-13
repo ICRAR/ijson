@@ -8,6 +8,10 @@ on:
   # 00:00 UTC every Saturday, don't bother anyone
   - cron: '0 0 * * 6'
 
+env:
+  UV_EXTRA_INDEX_URL: https://pypi.riseproject.dev/simple/
+  UV_INDEX_STRATEGY: unsafe-best-match
+
 jobs:
 
   calculate_wheels_to_build:
@@ -19,6 +23,8 @@ jobs:
       ARCHS_LINUX_INTEL_FULL: '["x86_64", "i686"]'
       ARCHS_LINUX_ARM_BASE: '["aarch64"]'
       ARCHS_LINUX_ARM_FULL: '["aarch64"]'
+      ARCHS_LINUX_RISCV_BASE: '["riscv64"]'
+      ARCHS_LINUX_RISCV_FULL: '["riscv64"]'
       ARCHS_MACOS_BASE: '["x86_64"]'
       ARCHS_MACOS_FULL: '["x86_64", "arm64", "universal2"]'
       ARCHS_WINDOWS_BASE: '["AMD64"]'
@@ -38,6 +44,7 @@ jobs:
           combinations = (
               ("ubuntu-24.04", "ARCHS_LINUX_INTEL"),
               ("ubuntu-24.04-arm", "ARCHS_LINUX_ARM"),
+              ("ubuntu-24.04-riscv", "ARCHS_LINUX_RISCV"),
               ("macos-14", "ARCHS_MACOS"),
               ("windows-2025", "ARCHS_WINDOWS"),
               ("windows-11-arm", "ARCHS_WINDOWS_ARM"),
@@ -61,6 +68,7 @@ jobs:
       matrix: ${{ fromJson(needs.calculate_wheels_to_build.outputs.matrix) }}
     env:
       CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_BUILD_FRONTEND: "build[uv]"
 
     steps:
       - uses: actions/checkout@v7
@@ -71,6 +79,10 @@ jobs:
         uses: pypa/cibuildwheel@v4.2.1
         with:
           output-dir: wheelhouse
+          # CIBW_BUILD_FRONTEND uses uv; without this the action never
+          # installs its own uv and just hopes one is already on PATH
+          # (true on some runner images, not on macos-14 -> "uv not found").
+          extras: uv
 
       - uses: actions/upload-artifact@v7
         with:
@@ -83,16 +95,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
-        name: Install Python
+      - name: Python ${{ matrix.config.python }}
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
+          activate-environment: true
           python-version: '3.13'
 
       - name: Install build
-        run: pip install build
+        run: uv pip install build
 
       - name: Build sdist
-        run: python -m build -s
+        run: uv build --sdist
 
       - uses: actions/upload-artifact@v7
         with:
@@ -104,10 +117,11 @@ jobs:
     needs: [build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v7
-        name: Install Python
+      - name: Python ${{ matrix.config.python }}
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.13"
+          activate-environment: true
+          python-version: '3.13'
 
       - uses: actions/download-artifact@v8
         with:
@@ -117,10 +131,10 @@ jobs:
         run: tar xvf ijson*.tar.gz && rm ijson*.tar.gz
 
       - name: Install source distribution
-        run: pip install ./ijson*
+        run: uv pip install ./ijson*
 
       - name: Install test dependencies
-        run: pip install pytest cffi
+        run: uv pip install pytest cffi
 
       - name: Run source distribution tests
         run: cd ijson* && pytest
