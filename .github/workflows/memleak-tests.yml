@@ -8,6 +8,9 @@ on:
   # 00:00 UTC every Saturday, don't bother anyone
   - cron: '0 0 * * 6'
 
+env:
+  PIP_EXTRA_INDEX_URL: https://pypi.riseproject.dev/simple/
+
 jobs:
 
   memleak_tests:
@@ -35,10 +38,10 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: pip install .
+        run: python3 -m pip install .
 
       - name: Install test dependencies
-        run: pip install -r test-requirements.txt
+        run: python3 -m pip install -r test-requirements.txt
 
       - name: Run memory leak tests
         run: pytest --memleaks-only -v
