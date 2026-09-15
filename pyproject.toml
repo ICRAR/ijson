@@ -76,7 +76,8 @@ deps = ["docutils", "Pygments"]
 
 [tool.cibuildwheel]
 before-all = "bash -c 'cd \"{project}\"; sh .github/tools/install_yajl.sh'"
-before-test = "pip install -r test-requirements.txt"
+# build-frontend is uv, and uv-created venvs don't ship pip
+before-test = "uv pip install -r test-requirements.txt"
 build-verbosity = 1
 enable = [
     "pypy",
@@ -85,6 +86,10 @@ enable = [
 # it doesn't make sense to build wheels for platforms not supported by that version
 skip = "pp39*"
 test-command = "pytest -vv {project}/tests"
+
+[tool.cibuildwheel.linux]
+# The manylinux containers don't inherit the job's environment
+environment-pass = ["UV_EXTRA_INDEX_URL", "UV_INDEX_STRATEGY"]
 
 [tool.cibuildwheel.macos.environment]
 IJSON_EMBED_YAJL = "1"
