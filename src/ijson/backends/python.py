@@ -8,8 +8,10 @@ from ijson import common, utils
 import codecs
 
 
-LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|\S')
+LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|[^ \t\r\n]')
 UNARY_LEXEMES = set('[]{},')
+_LEXER_COMPACT_THRESHOLD = 64 * 1024
+JSON_NUMBER_RE = re.compile(r'-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\Z')
 EOF = -1, None
 
 
@@ -102,6 +104,12 @@ def Lexer(target):
                     lexeme = match.group()
                 send((discarded + match.start(), lexeme))
                 pos = match.end()
+            # Drop completed lexemes even when the next chunk arrives inside a
+            # string/number. Otherwise a compact document can keep growing buf.
+            if pos >= _LEXER_COMPACT_THRESHOLD:
+                discarded += pos
+                buf = buf[pos:]
+                pos = 0
         else:
             # Don't ask data from an already exhausted source
             if data:
@@ -132,7 +140,7 @@ _PARSE_OBJECT_END = 3
 inf = float("inf")
 
 @utils.coroutine
-def parse_value(target, multivalue, use_float):
+def parse_value(target, multivalue, use_float, allow_float_overflow=False):
     """
     Parses results coming out of the Lexer into ijson events, which are sent to
     `target`. A stack keeps track of the type of object being parsed at the time
@@ -214,16 +222,11 @@ def parse_value(target, multivalue, use_float):
                     push(_PARSE_OBJECT_KEY)
             # A number
             else:
-                # JSON numbers can't contain leading zeros
-                if ((len(symbol) > 1 and symbol[0] == '0' and symbol[1] not in ('e', 'E', '.')) or
-                    (len(symbol) > 2 and symbol[0:2] == '-0' and symbol[2] not in ('e', 'E', '.'))):
-                    raise common.JSONError('Invalid JSON number: %s' % (symbol,))
-                # Fractions need a leading digit and must be followed by a digit
-                if symbol[0] == '.' or symbol[-1] == '.':
-                    raise common.JSONError('Invalid JSON number: %s' % (symbol,))
                 try:
+                    if not JSON_NUMBER_RE.fullmatch(symbol):
+                        raise ValueError("Invalid JSON number")
                     number = to_number(symbol)
-                    if number == inf:
+                    if number == inf and not allow_float_overflow:
                         raise common.JSONError("float overflow: %s" % (symbol,))
                 except:
                     if 'true'.startswith(symbol) or 'false'.startswith(symbol) or 'null'.startswith(symbol):
@@ -272,7 +275,7 @@ def parse_string(symbol):
 
 
 def basic_parse_basecoro(target, multiple_values=False, allow_comments=False,
-                         use_float=False):
+                         use_float=False, allow_float_overflow=False):
     '''
     Iterator yielding unprefixed events.
 
@@ -282,7 +285,11 @@ def basic_parse_basecoro(target, multiple_values=False, allow_comments=False,
     '''
     if allow_comments:
         raise ValueError("Comments are not supported by the python backend")
-    return utf8_encoder(Lexer(parse_value(target, multiple_values, use_float)))
+    if allow_float_overflow and not use_float:
+        raise ValueError("allow_float_overflow requires use_float=True")
+    return utf8_encoder(Lexer(parse_value(
+        target, multiple_values, use_float, allow_float_overflow
+    )))
 
 
 common.enrich_backend(globals(), c_comments=False)
