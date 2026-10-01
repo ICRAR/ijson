@@ -393,6 +393,16 @@ to give users more fine-grained control over certain operations:
   Future versions of ijson
   might change the default value of this option
   to ``True``.
+- The Python backend supports ``allow_float_overflow`` (defaults to ``False``)
+  together with ``use_float=True``.
+  Explicitly enabling it keeps Python's ``float()`` conversion behavior for
+  overflow and underflow, producing infinities or zero instead of rejecting
+  positive overflow.
+  Integer lexemes still produce arbitrary-size Python integers.
+  The default overflow behavior is unchanged, and using this option without
+  ``use_float=True`` raises ``ValueError``.
+  This option does not enable non-JSON literals such as ``NaN`` or ``Infinity``.
+
 - The ``multiple_values`` option (defaults to ``False``)
   controls whether multiple top-level values are supported.
   JSON content should contain a single top-level value
