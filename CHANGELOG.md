@@ -2,6 +2,8 @@
 
 ## Development
 
+## [3.6.0]
+
 * Removed support for Python < 3.10
 * Fixed treatment of null characters on strings (map keys and string values) on `cffi` backend (#178).
 
@@ -413,3 +415,4 @@
 [3.4.0.post0]: https://github.com/ICRAR/ijson/releases/tag/v3.4.0.post0
 [3.5.0]: https://github.com/ICRAR/ijson/releases/tag/v3.5.0
 [3.5.1]: https://github.com/ICRAR/ijson/releases/tag/v3.5.1
+[3.6.0]: https://github.com/ICRAR/ijson/releases/tag/v3.6.0
