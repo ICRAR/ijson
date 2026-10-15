@@ -7,6 +7,7 @@ import weakref
 
 import pytest
 
+import ijson
 from ijson import common
 from ijson.common import ObjectBuilder
 
@@ -26,6 +27,23 @@ class TestMisc:
         if spec is None:
             pytest.skip("yajl2_c is not built")
         importlib.util.module_from_spec(spec)
+
+    @pytest.mark.parametrize("length", [17, 4096, -2])
+    def test_yajl2_c_invalid_readinto_length(self, length):
+        try:
+            backend = ijson.get_backend("yajl2_c")
+        except ImportError:
+            pytest.skip("yajl2_c is not built")
+
+        class BadReadinto:
+            def read(self, n):
+                return b''
+            def readinto(self, buf):
+                buf[:] = b' ' * len(buf)
+                return length
+
+        with pytest.raises(ValueError, match="readinto"):
+            list(backend.basic_parse(BadReadinto(), buf_size=16))
 
 
 class TestObjectBuilder:
