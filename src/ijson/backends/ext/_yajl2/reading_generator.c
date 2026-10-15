@@ -126,6 +126,14 @@ PyObject *reading_generator_next(reading_generator_t *self)
 			N_M1(length);
 			Py_DECREF(plength);
 			N_M1(PyObject_GetBuffer(self->buffer, &view, PyBUF_SIMPLE));
+			if (length < 0 || length > view.len) {
+				PyErr_Format(PyExc_ValueError,
+				             "readinto() returned invalid length %zd "
+				             "(should have been between 0 and %zd)",
+				             length, view.len);
+				PyBuffer_Release(&view);
+				return NULL;
+			}
 			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, view.buf, length);
 			PyBuffer_Release(&view);
 			if (!send_res) {
