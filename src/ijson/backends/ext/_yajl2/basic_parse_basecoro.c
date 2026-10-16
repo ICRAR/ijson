@@ -88,8 +88,10 @@ static int number(void * ctx, const char *numberVal, size_t numberLen) {
 		char *endptr;
 		val = PyLong_FromString(nval, &endptr, 10);
 		free(nval);
-		assert(("string provided by yajl is not an integer",
-		        val != NULL && endptr != nval));
+		// can fail even for valid input, e.g., when exceeding
+		// sys.get_int_max_str_digits()
+		Z_N(val);
+		assert(("string provided by yajl is not an integer", endptr != nval));
 	}
 	else {
 		Z_N(val = PyObject_CallFunction(((yajl_parse_context *)ctx)->module_state->Decimal, "s#", numberVal, numberLen));
