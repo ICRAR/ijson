@@ -120,17 +120,23 @@ PyObject *reading_generator_next(reading_generator_t *self)
 		}
 		else {
 			// read_func is "readinto"
+			Py_ssize_t buf_len = PyByteArray_GET_SIZE(self->buffer);
 			PyObject *plength = PyObject_CallFunctionObjArgs(self->read_func, self->buffer, NULL);
 			N_N(plength);
-			length = PyLong_AsLong(plength);
-			N_M1(length);
+			length = PyNumber_AsSsize_t(plength, PyExc_ValueError);
 			Py_DECREF(plength);
+			if (length == -1 && PyErr_Occurred()) {
+				return NULL;
+			}
 			N_M1(PyObject_GetBuffer(self->buffer, &view, PyBUF_SIMPLE));
-			if (length < 0 || length > view.len) {
+			if (view.len < buf_len) {
+				buf_len = view.len;
+			}
+			if (length < 0 || length > buf_len) {
 				PyErr_Format(PyExc_ValueError,
 				             "readinto() returned invalid length %zd "
 				             "(should have been between 0 and %zd)",
-				             length, view.len);
+				             length, buf_len);
 				PyBuffer_Release(&view);
 				return NULL;
 			}
