@@ -28,7 +28,7 @@ class TestMisc:
             pytest.skip("yajl2_c is not built")
         importlib.util.module_from_spec(spec)
 
-    @pytest.mark.parametrize("length", [17, 4096, -2])
+    @pytest.mark.parametrize("length", [17, 4096, -1, -2, 2**64])
     def test_yajl2_c_invalid_readinto_length(self, length):
         try:
             backend = ijson.get_backend("yajl2_c")
@@ -42,8 +42,25 @@ class TestMisc:
                 buf[:] = b' ' * len(buf)
                 return length
 
-        with pytest.raises(ValueError, match="readinto"):
+        with pytest.raises(ValueError):
             list(backend.basic_parse(BadReadinto(), buf_size=16))
+
+    def test_yajl2_c_readinto_length_checked_against_original_size(self):
+        try:
+            backend = ijson.get_backend("yajl2_c")
+        except ImportError:
+            pytest.skip("yajl2_c is not built")
+
+        class GrowingReadinto:
+            def read(self, n):
+                return b''
+            def readinto(self, buf):
+                size = len(buf)
+                buf[:] = b' ' * (size * 2)
+                return size * 2
+
+        with pytest.raises(ValueError, match="readinto"):
+            list(backend.basic_parse(GrowingReadinto(), buf_size=16))
 
 
 class TestObjectBuilder:
