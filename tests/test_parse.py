@@ -41,3 +41,16 @@ def test_user_events(backend):
         ('', 'end_array', None),
     ]
     assert expected_parse_events == list(backend.parse(int_array_basic_parse_events))
+
+
+@pytest.mark.parametrize("events, exc_type", [
+    ([('end_map', None)], IndexError),
+    ([('end_array', None)], IndexError),
+    ([('map_key', 'a')], IndexError),
+    ([('start_array', None), ('end_array', None), ('end_array', None)], IndexError),
+    ([('start_map', None), ('start_array', None)], TypeError),
+])
+def test_unbalanced_user_events(backend, events, exc_type):
+    """Malformed user-provided events raise instead of crashing yajl2_c"""
+    with pytest.raises(exc_type):
+        list(backend.parse(events))
