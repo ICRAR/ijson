@@ -101,7 +101,7 @@ def test_32bit_ints(adaptor):
 
 @pytest.mark.parametrize("json", (b'1e400', b'-1e400'))
 def test_max_double(adaptor, json):
-    """Check that numbers bigger than MAX_DOUBLE (usually ~1e308) cannot be represented"""
+    """Check that numbers whose magnitude exceeds MAX_DOUBLE (usually ~1e308) cannot be represented"""
     _raises_json_error(adaptor, json, use_float=True)
 
 
