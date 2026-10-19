@@ -76,7 +76,9 @@ deps = ["docutils", "Pygments"]
 
 [tool.cibuildwheel]
 before-all = "bash -c 'cd \"{project}\"; sh .github/tools/install_yajl.sh'"
-before-test = "pip install -r test-requirements.txt"
+# uv-created venvs don't ship pip
+before-test = "uv pip install -r test-requirements.txt"
+build-frontend = "build[uv]"
 build-verbosity = 1
 enable = [
     "pypy",
