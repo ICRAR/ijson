@@ -19,16 +19,17 @@ jobs:
         python_version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
           - os: ubuntu-latest
-            python_version: "pypy3.10"
+            python_version: "pypy@3.10"
 
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - uses: actions/setup-python@v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         name: Install Python
         with:
+          activate-environment: true
           python-version: ${{ matrix.python_version }}
 
       - name: Install Yajl
@@ -38,10 +39,10 @@ jobs:
       - name: Build ijson
         env:
           IJSON_EMBED_YAJL: ${{ matrix.os != 'ubuntu-latest' && '1' || '0' }}
-        run: pip install .
+        run: uv pip install .
 
       - name: Install test dependencies
-        run: pip install -r test-requirements.txt
+        run: uv pip install -r test-requirements.txt
 
       - name: Run unittests
         run: pytest -vv
