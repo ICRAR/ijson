@@ -33,7 +33,7 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False,
     '''
     if multiple_values:
         raise ValueError("yajl backend doesn't support multiple_values")
-    callbacks, _keepalive = _yajl2_ctypes_common.make_callbaks(target.send, use_float, 1)
+    callbacks, _keepalive, pending = _yajl2_ctypes_common.make_callbaks(target.send, use_float, 1)
     config = Config(allow_comments, True)
     handle = yajl.yajl_alloc(byref(callbacks), byref(config), None, None)
     try:
@@ -46,6 +46,7 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False,
                 result = yajl.yajl_parse(handle, buffer, len(buffer))
             else:
                 result = yajl.yajl_parse_complete(handle)
+            pending.raise_if_set()
             if result == _yajl2_ctypes_common.YAJL_ERROR:
                 error = _yajl2_ctypes_common.yajl_get_error(yajl, handle, buffer)
                 raise common.JSONError(error)

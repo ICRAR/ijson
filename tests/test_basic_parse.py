@@ -1,6 +1,7 @@
 """Tests for the ijson.basic_parse method"""
 
 import itertools
+import sys
 import threading
 from decimal import Decimal
 
@@ -103,6 +104,21 @@ def test_32bit_ints(adaptor):
 def test_max_double(adaptor, json):
     """Check that numbers whose magnitude exceeds MAX_DOUBLE (usually ~1e308) cannot be represented"""
     _raises_json_error(adaptor, json, use_float=True)
+
+
+@pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
+                    reason="no int max str digits limit")
+@pytest.mark.parametrize("routine, args, json_template", [
+    ("basic_parse", (), b'[%s]'),
+    ("parse", (), b'[%s]'),
+    ("items", ("item",), b'[%s]'),
+    ("kvitems", ("",), b'{"a": %s}'),
+])
+def test_int_exceeding_max_str_digits(adaptor, routine, args, json_template):
+    """Check that integers beyond sys.get_int_max_str_digits() raise int()'s ValueError on all backends"""
+    json = json_template % (b'1' * (sys.get_int_max_str_digits() + 1))
+    with pytest.raises(ValueError, match="integer string conversion"):
+        getattr(adaptor, routine)(json, *args)
 
 
 @pytest.mark.parametrize(
