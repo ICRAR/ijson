@@ -71,6 +71,9 @@ jobs:
         uses: pypa/cibuildwheel@v4.3.1
         with:
           output-dir: wheelhouse
+          # Install uv alongside cibuildwheel for the build[uv] frontend,
+          # since not every runner image has it on PATH
+          extras: uv
 
       - uses: actions/upload-artifact@v7
         with:
@@ -83,16 +86,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         name: Install Python
         with:
+          activate-environment: true
           python-version: '3.13'
 
-      - name: Install build
-        run: pip install build
-
       - name: Build sdist
-        run: python -m build -s
+        run: uv build --sdist
 
       - uses: actions/upload-artifact@v7
         with:
@@ -104,10 +105,11 @@ jobs:
     needs: [build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         name: Install Python
         with:
-          python-version: "3.13"
+          activate-environment: true
+          python-version: '3.13'
 
       - uses: actions/download-artifact@v8
         with:
@@ -117,10 +119,10 @@ jobs:
         run: tar xvf ijson*.tar.gz && rm ijson*.tar.gz
 
       - name: Install source distribution
-        run: pip install ./ijson*
+        run: uv pip install ./ijson*
 
       - name: Install test dependencies
-        run: pip install pytest cffi
+        run: uv pip install pytest cffi
 
       - name: Run source distribution tests
         run: cd ijson* && pytest
