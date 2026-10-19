@@ -28,7 +28,7 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False,
     - buf_size: a size of an input buffer
     - multiple_values: allows the parser to parse multiple JSON objects
     '''
-    callbacks, _keepalive = _yajl2_ctypes_common.make_callbaks(target.send, use_float, 2)
+    callbacks, _keepalive, pending = _yajl2_ctypes_common.make_callbaks(target.send, use_float, 2)
     handle = yajl.yajl_alloc(byref(callbacks), None, None)
     if allow_comments:
         yajl.yajl_config(handle, YAJL_ALLOW_COMMENTS, 1)
@@ -44,6 +44,7 @@ def basic_parse_basecoro(target, allow_comments=False, multiple_values=False,
                 result = yajl.yajl_parse(handle, buffer, len(buffer))
             else:
                 result = yajl.yajl_complete_parse(handle)
+            pending.raise_if_set()
             if result != _yajl2_ctypes_common.YAJL_OK:
                 error = _yajl2_ctypes_common.yajl_get_error(yajl, handle, buffer)
                 exception = common.IncompleteJSONError if result == _yajl2_ctypes_common.YAJL_INSUFFICIENT_DATA else common.JSONError

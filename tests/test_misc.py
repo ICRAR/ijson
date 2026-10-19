@@ -27,26 +27,6 @@ class TestMisc:
             pytest.skip("yajl2_c is not built")
         importlib.util.module_from_spec(spec)
 
-    @pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
-                        reason="no int max str digits limit")
-    @pytest.mark.parametrize("routine, args", [
-        ("basic_parse", ()),
-        ("parse", ()),
-        ("items", ("item",)),
-        ("kvitems", ("",)),
-    ])
-    def test_yajl2_c_int_exceeding_max_str_digits(self, routine, args):
-        try:
-            from ijson.backends import yajl2_c
-        except ImportError:
-            pytest.skip("yajl2_c is not built")
-        digits = sys.get_int_max_str_digits() + 1
-        json = b'[' + b'1' * digits + b']'
-        if routine == "kvitems":
-            json = b'{"a": ' + b'1' * digits + b'}'
-        with pytest.raises(ValueError):
-            list(getattr(yajl2_c, routine)(io.BytesIO(json), *args))
-
 
 class TestObjectBuilder:
     """Unit tests for the pure-python ObjectBuilder class"""

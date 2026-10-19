@@ -76,9 +76,14 @@ def append_event_to_ctx(event):
     def wrapper(func):
         @functools.wraps(func)
         def wrapped(ctx, *args, **kwargs):
-            value = func(*args, **kwargs)
-            send = ffi.from_handle(ctx)
-            send((event, value))
+            scope = ffi.from_handle(ctx)
+            try:
+                scope.send((event, func(*args, **kwargs)))
+            except BaseException as e:
+                # cffi would print the exception and return 0; keep it so
+                # yajl_parse can re-raise it after yajl cancels the parse
+                scope.exception = e
+                return 0
             return 1
         return wrapped
     return wrapper
@@ -163,7 +168,9 @@ _float_callback_data = (
 
 
 def yajl_init(scope, send, allow_comments=False, multiple_values=False, use_float=False):
-    scope.ctx = ffi.new_handle(send)
+    scope.send = send
+    scope.exception = None
+    scope.ctx = ffi.new_handle(scope)
     if use_float:
         scope.callbacks = ffi.new('yajl_callbacks*', _float_callback_data)
     else:
@@ -178,13 +185,16 @@ def yajl_init(scope, send, allow_comments=False, multiple_values=False, use_floa
     return handle
 
 
-def yajl_parse(handle, buffer):
+def yajl_parse(scope, handle, buffer):
     if buffer:
         result = yajl.yajl_parse(handle, buffer, len(buffer))
     else:
         result = yajl.yajl_complete_parse(handle)
 
     if result != YAJL_OK:
+        if scope.exception is not None:
+            exception, scope.exception = scope.exception, None
+            raise exception
         perror = yajl.yajl_get_error(handle, 1, buffer, len(buffer))
         error = ffi.string(perror)
         try:
@@ -222,7 +232,7 @@ def basic_parse_basecoro(target, **config):
                 buffer = (yield)
             except GeneratorExit:
                 buffer = b''
-            yajl_parse(handle, buffer)
+            yajl_parse(scope, handle, buffer)
             if not buffer:
                 break
     finally:

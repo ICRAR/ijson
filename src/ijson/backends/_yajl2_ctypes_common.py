@@ -48,11 +48,29 @@ def get_yajl(version):
     yajl.yajl_get_error.restype = POINTER(c_char)
     return yajl
 
-def _make_callback(send, use_float, field, event, func_type, func):
+class PendingException:
+    '''
+    Holds an exception raised inside a callback. ctypes would otherwise print
+    it and carry on, so the callback stores it here and cancels the parse,
+    and the parsing loop re-raises it once control is back in Python.
+    '''
+    def __init__(self):
+        self.exception = None
+
+    def raise_if_set(self):
+        exception, self.exception = self.exception, None
+        if exception is not None:
+            raise exception
+
+def _make_callback(send, use_float, pending, field, event, func_type, func):
     if use_float and field == 'number':
         return func_type()
     def c_callback(_context, *args):
-        send((event, func(*args)))
+        try:
+            send((event, func(*args)))
+        except BaseException as e:
+            pending.exception = e
+            return 0
         return 1
     return func_type(c_callback)
 
@@ -60,7 +78,9 @@ def make_callbaks(send, use_float, yajl_version):
     callback_data = _get_callback_data(yajl_version)
     class Callbacks(Structure):
         _fields_ = [(name, type) for name, _, type, _ in callback_data]
-    return Callbacks(*[_make_callback(send, use_float, *data) for data in callback_data]), _all_cfunct_types
+    pending = PendingException()
+    callbacks = Callbacks(*[_make_callback(send, use_float, pending, *data) for data in callback_data])
+    return callbacks, _all_cfunct_types, pending
 
 def yajl_get_error(yajl, handle, buffer):
     perror = yajl.yajl_get_error(handle, 1, buffer, len(buffer))

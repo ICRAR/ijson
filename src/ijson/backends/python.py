@@ -9,6 +9,7 @@ import codecs
 
 
 LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|\S')
+INTEGER_RE = re.compile(r'-?[0-9]+')
 UNARY_LEXEMES = set('[]{},')
 EOF = -1, None
 
@@ -229,6 +230,11 @@ def parse_value(target, multivalue, use_float):
                 except:
                     if 'true'.startswith(symbol) or 'false'.startswith(symbol) or 'null'.startswith(symbol):
                         raise common.IncompleteJSONError('Incomplete JSON content')
+                    # a well-formed integer that int() still refused is one
+                    # longer than sys.get_int_max_str_digits(); let that
+                    # error through as the other backends do
+                    if INTEGER_RE.fullmatch(symbol):
+                        raise
                     raise UnexpectedSymbol(symbol, pos)
                 else:
                     send(('number', number))
