@@ -2,6 +2,8 @@
 
 from .test_base import ARRAY_JSON, EMPTY_MEMBER_TEST_CASES, JSON, JSON_KVITEMS, JSON_KVITEMS_META, JSON_OBJECT
 
+import sys
+
 import pytest
 
 
@@ -72,3 +74,12 @@ def test_user_events(backend):
         ('', 'end_map', None),
     ]
     assert [('a', 0)] == list(backend.kvitems(int_element_parse_events, ''))
+
+
+@pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
+                    reason="no int max str digits limit")
+def test_kvitems_int_exceeding_max_str_digits(adaptor):
+    """Check that kvitems raises int()'s ValueError for integers beyond sys.get_int_max_str_digits()"""
+    json = b'{"a": %s}' % (b'1' * (sys.get_int_max_str_digits() + 1))
+    with pytest.raises(ValueError, match="integer string conversion"):
+        adaptor.kvitems(json, '')

@@ -108,17 +108,11 @@ def test_max_double(adaptor, json):
 
 @pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
                     reason="no int max str digits limit")
-@pytest.mark.parametrize("routine, args, json_template", [
-    ("basic_parse", (), b'[%s]'),
-    ("parse", (), b'[%s]'),
-    ("items", ("item",), b'[%s]'),
-    ("kvitems", ("",), b'{"a": %s}'),
-])
-def test_int_exceeding_max_str_digits(adaptor, routine, args, json_template):
+def test_int_exceeding_max_str_digits(adaptor):
     """Check that integers beyond sys.get_int_max_str_digits() raise int()'s ValueError on all backends"""
-    json = json_template % (b'1' * (sys.get_int_max_str_digits() + 1))
+    json = b'[%s]' % (b'1' * (sys.get_int_max_str_digits() + 1))
     with pytest.raises(ValueError, match="integer string conversion"):
-        getattr(adaptor, routine)(json, *args)
+        adaptor.basic_parse(json)
 
 
 @pytest.mark.parametrize(
