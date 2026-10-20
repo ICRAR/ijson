@@ -1,6 +1,8 @@
 """Tests for the ijson.items method"""
 
 import collections
+import sys
+
 import pytest
 
 from .test_base import ARRAY_JSON, ARRAY_JSON_OBJECT, EMPTY_MEMBER_TEST_CASES, JSON, JSON_OBJECT
@@ -96,3 +98,12 @@ def test_user_events(backend):
         ('', 'end_array', None),
     ]
     assert [[]] == list(backend.items(embedded_empty_list_events, 'item'))
+
+
+@pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
+                    reason="no int max str digits limit")
+def test_items_int_exceeding_max_str_digits(adaptor):
+    """Check that items raises int()'s ValueError for integers beyond sys.get_int_max_str_digits()"""
+    json = b'[%s]' % (b'1' * (sys.get_int_max_str_digits() + 1))
+    with pytest.raises(ValueError, match="integer string conversion"):
+        adaptor.items(json, 'item')

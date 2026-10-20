@@ -1,5 +1,7 @@
 """Tests for the ijson.parse method"""
 
+import sys
+
 import pytest
 
 from .test_base import ARRAY_JSON, ARRAY_JSON_PARSE_EVENTS, JSON, JSON_PARSE_EVENTS
@@ -41,3 +43,12 @@ def test_user_events(backend):
         ('', 'end_array', None),
     ]
     assert expected_parse_events == list(backend.parse(int_array_basic_parse_events))
+
+
+@pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
+                    reason="no int max str digits limit")
+def test_parse_int_exceeding_max_str_digits(adaptor):
+    """Check that parse raises int()'s ValueError for integers beyond sys.get_int_max_str_digits()"""
+    json = b'[%s]' % (b'1' * (sys.get_int_max_str_digits() + 1))
+    with pytest.raises(ValueError, match="integer string conversion"):
+        adaptor.parse(json)
