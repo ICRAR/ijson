@@ -87,22 +87,31 @@ def Lexer(target):
                             data = ''
                         if not data:
                             raise common.IncompleteJSONError('Incomplete string lexeme')
+                        # no closing quote so far, only look in the new data
+                        start = len(buf)
                         buf += data
                 send((discarded + pos, buf[pos:end + 1]))
                 pos = end + 1
             else:
-                while lexeme not in UNARY_LEXEMES and match.end() == len(buf):
-                    try:
-                        data = (yield)
-                    except GeneratorExit:
-                        data = ''
-                    if not data:
-                        break
-                    buf += data
-                    match = LEXEME_RE.search(buf, pos)
-                    lexeme = match.group()
-                send((discarded + match.start(), lexeme))
-                pos = match.end()
+                start = match.start()
+                end = match.end()
+                if lexeme not in UNARY_LEXEMES and end == len(buf):
+                    # don't keep a reference to buf so it can grow in place
+                    match = None
+                    while end == len(buf):
+                        try:
+                            data = (yield)
+                        except GeneratorExit:
+                            data = ''
+                        if not data:
+                            break
+                        buf += data
+                        # resume from the lexeme's last character instead of
+                        # rescanning all of it for every new chunk
+                        end = LEXEME_RE.match(buf, end - 1).end()
+                    lexeme = buf[start:end]
+                send((discarded + start, lexeme))
+                pos = end
         else:
             # Don't ask data from an already exhausted source
             if data:

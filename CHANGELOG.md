@@ -5,6 +5,9 @@
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).
+* The `python` backend no longer rescans a partially read string, number
+  or literal from its start every time a new chunk of input arrives,
+  which made parsing a single long lexeme quadratic in its length.
 
 ## [3.6.0]
 
