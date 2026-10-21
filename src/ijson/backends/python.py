@@ -220,8 +220,12 @@ def parse_value(target, multivalue, use_float):
                 if ((len(symbol) > 1 and symbol[0] == '0' and symbol[1] not in ('e', 'E', '.')) or
                     (len(symbol) > 2 and symbol[0:2] == '-0' and symbol[2] not in ('e', 'E', '.'))):
                     raise common.JSONError('Invalid JSON number: %s' % (symbol,))
+                # JSON numbers can't start with a plus sign
+                if symbol[0] == '+':
+                    raise common.JSONError('Invalid JSON number: %s' % (symbol,))
                 # Fractions need a leading digit and must be followed by a digit
-                if symbol[0] == '.' or symbol[-1] == '.':
+                dot = symbol.find('.')
+                if dot != -1 and not (symbol[dot - 1:dot].isdigit() and symbol[dot + 1:dot + 2].isdigit()):
                     raise common.JSONError('Invalid JSON number: %s' % (symbol,))
                 try:
                     number = to_number(symbol)

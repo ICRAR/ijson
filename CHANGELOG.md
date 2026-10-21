@@ -15,6 +15,9 @@
   which made parsing a single long string quadratic in its length. This reaches 
   the `yajl2_c` backend when ijson is built against the bundled yajl like the 
   wheels. Builds against a system yajl keep the old behavior. (#194).
+* The `python` backend now rejects numbers with a leading `+` sign
+  (e.g., `+1`) or with a fraction dot not surrounded by digits
+  (e.g., `-.5`, `1.e5`), as the `yajl` backends already do.
 
 ## [3.6.0]
 
