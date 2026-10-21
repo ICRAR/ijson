@@ -5,6 +5,9 @@
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).
+* The `python` backend now rejects numbers with a leading `+` sign
+  (e.g., `+1`) or with a fraction dot not surrounded by digits
+  (e.g., `-.5`, `1.e5`), as the `yajl` backends already do.
 
 ## [3.6.0]
 
