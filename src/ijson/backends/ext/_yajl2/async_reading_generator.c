@@ -101,20 +101,80 @@ static int is_gen_coroutine(PyObject *o)
 	return 0;
 }
 
+static void clear_awaitable(async_reading_generator *gen)
+{
+#if PY_VERSION_HEX >= 0x030C0000
+	PyObject *exception = PyErr_GetRaisedException();
+	Py_CLEAR(gen->awaitable);
+	PyErr_SetRaisedException(exception);
+#else
+	PyObject *type, *value, *traceback;
+	PyErr_Fetch(&type, &value, &traceback);
+	Py_CLEAR(gen->awaitable);
+	PyErr_Restore(type, value, traceback);
+#endif
+}
+
 static PyObject* value_from_stopiteration()
 {
+	if (!PyErr_Occurred()) {
+		Py_RETURN_NONE;
+	}
 	PyObject *ptype, *pvalue, *ptraceback, *return_value;
 	PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-	if (PyErr_GivenExceptionMatches(pvalue, PyExc_StopIteration)) {
-		return_value = PyObject_GetAttrString(pvalue, "value");
-		Py_XDECREF(pvalue);
+	PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+	if (!PyObject_TypeCheck(pvalue, (PyTypeObject *)PyExc_StopIteration)) {
+		PyErr_Restore(ptype, pvalue, ptraceback);
+		return NULL;
 	}
-	else {
-		return_value = pvalue;
-	}
+	return_value = PyObject_GetAttrString(pvalue, "value");
+	Py_XDECREF(pvalue);
 	Py_XDECREF(ptype);
 	Py_XDECREF(ptraceback);
 	return return_value;
+}
+
+static PyObject *async_reading_generator_result(async_reading_generator *gen, PyObject *value)
+{
+	if (value) {
+		return value;
+	}
+	if (PyErr_Occurred() && !PyErr_ExceptionMatches(PyExc_StopIteration)) {
+		clear_awaitable(gen);
+		return NULL;
+	}
+	PyObject *buffer = value_from_stopiteration();
+	clear_awaitable(gen);
+	N_N(buffer);
+
+	// Initialisation must retain the file until the read function is available.
+	if (gen->read_func == NULL) {
+		gen->read_func = buffer;
+		Py_CLEAR(gen->file);
+		Py_RETURN_NONE;
+	}
+
+	Py_buffer view;
+	if (PyObject_GetBuffer(buffer, &view, PyBUF_SIMPLE) == -1) {
+		Py_DECREF(buffer);
+		return NULL;
+	}
+	gen->file_exhausted = (view.len == 0);
+	BasicParseBasecoro *basic_parse_basecoro = (BasicParseBasecoro *)gen->coro;
+	PyObject *res = ijson_yajl_parse(basic_parse_basecoro, view.buf, view.len);
+	PyObject *type, *error, *traceback;
+	PyErr_Fetch(&type, &error, &traceback);
+	PyBuffer_Release(&view);
+	Py_DECREF(buffer);
+	PyErr_Restore(type, error, traceback);
+	N_N(res);
+	Py_DECREF(res);
+
+	// values are returned via StopIteration exception values
+	if (maybe_pop_event(gen)) {
+		return NULL;
+	}
+	Py_RETURN_NONE;
 }
 
 static PyObject *async_reading_generator_next(PyObject *self)
@@ -143,7 +203,6 @@ static PyObject *async_reading_generator_next(PyObject *self)
 			Py_DECREF(get_read_coro);
 			Py_DECREF(get_read_func);
 			Py_DECREF(utils35);
-			Py_CLEAR(gen->file);
 		}
 		else {
 			PyObject *read_coro;
@@ -162,45 +221,68 @@ static PyObject *async_reading_generator_next(PyObject *self)
 		}
 	}
 
-	// Propagate values/errors that are not StopIteration
 	PyObject *value = Py_TYPE(gen->awaitable)->tp_iternext(gen->awaitable);
-	if (value) {
-		return value;
-	}
-	else if (!PyErr_ExceptionMatches(PyExc_StopIteration)) {
-		return NULL;
-	}
-	Py_CLEAR(gen->awaitable);
-
-	// We await on two things: getting the correct read function (only once),
-	// and reading from it (many times, self->read_func is set)
-	if (gen->read_func == NULL) {
-		gen->read_func = value_from_stopiteration();
-		Py_RETURN_NONE;
-	}
-
-	// Finished awaiting on read() result, parse it
-	PyObject *buffer = value_from_stopiteration();
-
-	Py_buffer view;
-	N_M1(PyObject_GetBuffer(buffer, &view, PyBUF_SIMPLE));
-	gen->file_exhausted = (view.len == 0);
-	BasicParseBasecoro *basic_parse_basecoro = (BasicParseBasecoro *)gen->coro;
-	PyObject *res = ijson_yajl_parse(basic_parse_basecoro, view.buf, view.len);
-	N_N(res);
-	Py_DECREF(res);
-
-	PyBuffer_Release(&view);
-	Py_DECREF(buffer);
-
-	// values are returned via StopIteration exception values
-	if (maybe_pop_event(gen)) {
-		return NULL;
-	}
-
-	// Keep trying
-	Py_RETURN_NONE;
+	return async_reading_generator_result(gen, value);
 }
+
+static PyObject *async_reading_generator_throw(async_reading_generator *gen, PyObject *args)
+{
+	PyObject *type, *value = NULL, *traceback = NULL;
+	N_Z(PyArg_ParseTuple(args, "O|OO:throw", &type, &value, &traceback));
+	if (traceback == Py_None) {
+		traceback = NULL;
+	}
+	if (traceback && !PyTraceBack_Check(traceback)) {
+		PyErr_SetString(PyExc_TypeError, "throw() third argument must be a traceback object");
+		return NULL;
+	}
+	if (!PyExceptionClass_Check(type) && !PyExceptionInstance_Check(type)) {
+		PyErr_SetString(PyExc_TypeError, "throw() argument must be an exception class or instance");
+		return NULL;
+	}
+	if (PyExceptionInstance_Check(type) && value && value != Py_None) {
+		PyErr_SetString(PyExc_TypeError, "instance exception may not have a separate value");
+		return NULL;
+	}
+
+	if (gen->awaitable) {
+		PyObject *method = PyObject_GetAttrString(gen->awaitable, "throw");
+		if (method) {
+			PyObject *result = PyObject_CallObject(method, args);
+			Py_DECREF(method);
+			return async_reading_generator_result(gen, result);
+		}
+		if (!PyErr_ExceptionMatches(PyExc_AttributeError)) {
+			clear_awaitable(gen);
+			return NULL;
+		}
+		PyErr_Clear();
+		clear_awaitable(gen);
+	}
+
+	Py_INCREF(type);
+	Py_XINCREF(value);
+	Py_XINCREF(traceback);
+	if (PyExceptionInstance_Check(type)) {
+		Py_XDECREF(value);
+		value = type;
+		type = (PyObject *)Py_TYPE(value);
+		Py_INCREF(type);
+		if (traceback == NULL) {
+			traceback = PyException_GetTraceback(value);
+		}
+	}
+	else {
+		PyErr_NormalizeException(&type, &value, &traceback);
+	}
+	PyErr_Restore(type, value, traceback);
+	return NULL;
+}
+
+static PyMethodDef async_reading_generator_throw_methods[] = {
+	{"throw", (PyCFunction)async_reading_generator_throw, METH_VARARGS, NULL},
+	{NULL}
+};
 
 static PyAsyncMethods async_reading_generator_methods = {
 	.am_await = ijson_return_self,
@@ -217,4 +299,5 @@ PyTypeObject AsyncReadingGeneratorType = {
 	.tp_as_async = &async_reading_generator_methods,
 	.tp_iter = ijson_return_self,
 	.tp_iternext = async_reading_generator_next,
+	.tp_methods = async_reading_generator_throw_methods,
 };
