@@ -8,6 +8,10 @@ on:
   # 00:00 UTC every Saturday, don't bother anyone
   - cron: '0 0 * * 6'
 
+env:
+  UV_EXTRA_INDEX_URL: https://pypi.riseproject.dev/simple/
+  UV_INDEX_STRATEGY: unsafe-best-match
+
 jobs:
 
   fast_tests:
@@ -15,7 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-2025, macos-14]
+        os: [ubuntu-latest, ubuntu-24.04-arm, ubuntu-24.04-riscv, windows-2025, macos-14]
         python_version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
           - os: ubuntu-latest
