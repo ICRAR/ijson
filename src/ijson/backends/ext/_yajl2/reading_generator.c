@@ -123,7 +123,7 @@ PyObject *reading_generator_next(reading_generator_t *self)
 			Py_ssize_t buf_len = PyByteArray_GET_SIZE(self->buffer);
 			PyObject *plength = PyObject_CallFunctionObjArgs(self->read_func, self->buffer, NULL);
 			N_N(plength);
-			length = PyNumber_AsSsize_t(plength, PyExc_ValueError);
+			length = PyLong_AsSsize_t(plength);
 			Py_DECREF(plength);
 			if (length == -1 && PyErr_Occurred()) {
 				return NULL;

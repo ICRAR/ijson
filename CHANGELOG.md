@@ -5,6 +5,9 @@
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).
+* The `yajl2_c` backend now raises a `ValueError` when a file object's
+  `readinto()` returns a length outside the bounds of the buffer it was given,
+  instead of reading past the end of that buffer (#187).
 
 ## [3.6.0]
 
