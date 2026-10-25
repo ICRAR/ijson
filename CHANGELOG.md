@@ -8,6 +8,8 @@
 * The `yajl2_c` backend now raises a `ValueError` when a file object's
   `readinto()` returns a length outside the bounds of the buffer it was given,
   instead of reading past the end of that buffer (#187).
+* The `yajl2_c` backend provides a `memoryview` object to `readinto` objects
+  to ensure the underlying buffer stays of a fixed size.
 
 ## [3.6.0]
 

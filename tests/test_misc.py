@@ -2,6 +2,7 @@ import collections
 import gc
 import importlib.util
 import io
+import platform
 import sys
 import weakref
 
@@ -52,6 +53,7 @@ class TestMisc:
             list(backend.basic_parse(BadReadinto(), buf_size=16))
 
     def test_yajl2_c_readinto_length_checked_against_original_size(self):
+        """Check that readinto() cannot make the ijson-controlled buffer grow."""
         try:
             backend = ijson.get_backend("yajl2_c")
         except ImportError:
@@ -65,7 +67,11 @@ class TestMisc:
                 buf[:] = b' ' * (size * 2)
                 return size * 2
 
-        with pytest.raises(ValueError, match=r"readinto\(\) returned invalid length 32"):
+        if platform.python_implementation() == "PyPy":
+            match = "cannot modify size of memoryview object"
+        else:
+            match = "memoryview assignment: lvalue and rvalue have different structures"
+        with pytest.raises(ValueError, match=match):
             list(backend.basic_parse(GrowingReadinto(), buf_size=16))
 
 
