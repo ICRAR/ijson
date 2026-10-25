@@ -19,6 +19,8 @@ jobs:
       ARCHS_LINUX_INTEL_FULL: '["x86_64", "i686"]'
       ARCHS_LINUX_ARM_BASE: '["aarch64"]'
       ARCHS_LINUX_ARM_FULL: '["aarch64"]'
+      ARCHS_LINUX_RISCV_BASE: '["riscv64"]'
+      ARCHS_LINUX_RISCV_FULL: '["riscv64"]'
       ARCHS_MACOS_BASE: '["x86_64"]'
       ARCHS_MACOS_FULL: '["x86_64", "arm64", "universal2"]'
       ARCHS_WINDOWS_BASE: '["AMD64"]'
@@ -38,6 +40,7 @@ jobs:
           combinations = (
               ("ubuntu-24.04", "ARCHS_LINUX_INTEL"),
               ("ubuntu-24.04-arm", "ARCHS_LINUX_ARM"),
+              ("ubuntu-24.04-riscv", "ARCHS_LINUX_RISCV"),
               ("macos-14", "ARCHS_MACOS"),
               ("windows-2025", "ARCHS_WINDOWS"),
               ("windows-11-arm", "ARCHS_WINDOWS_ARM"),
