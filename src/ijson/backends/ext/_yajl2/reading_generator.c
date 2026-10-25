@@ -106,14 +106,14 @@ PyObject *reading_generator_next(reading_generator_t *self)
 	while (nevents == 0 && !reading_generator_exception_caught(self)) {
 
 		/* Read data and pass it down to the co-routine */
-		Py_ssize_t length;
+		Py_ssize_t bytes_read;
 		if (self->read_buffer_memview == NULL) {
 			// read_func is "read"
 			Py_buffer view;
 			PyObject *pbuffer = PyObject_CallFunctionObjArgs(self->read_func, self->buf_size, NULL);
 			N_N(pbuffer);
 			N_M1(PyObject_GetBuffer(pbuffer, &view, PyBUF_SIMPLE));
-			length = view.len;
+			bytes_read = view.len;
 			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, view.buf, view.len);
 			Py_DECREF(pbuffer);
 			PyBuffer_Release(&view);
@@ -123,29 +123,29 @@ PyObject *reading_generator_next(reading_generator_t *self)
 		}
 		else {
 			// read_func is "readinto"
-			PyObject *py_length = PyObject_CallFunctionObjArgs(self->read_func, self->read_buffer_memview, NULL);
-			N_N(py_length);
-			length = PyLong_AsSsize_t(py_length);
-			Py_DECREF(py_length);
-			if (length == -1 && PyErr_Occurred()) {
+			PyObject *py_bytes_read = PyObject_CallFunctionObjArgs(self->read_func, self->read_buffer_memview, NULL);
+			N_N(py_bytes_read);
+			bytes_read = PyLong_AsSsize_t(py_bytes_read);
+			Py_DECREF(py_bytes_read);
+			if (bytes_read == -1 && PyErr_Occurred()) {
 				return NULL;
 			}
 			Py_buffer *buffer = PyMemoryView_GET_BUFFER(self->read_buffer_memview);
-			if (length < 0 || length > buffer->len) {
+			if (bytes_read < 0 || bytes_read > buffer->len) {
 				PyErr_Format(PyExc_ValueError,
 				             "readinto() returned invalid length %zd "
 				             "(should have been between 0 and %zd)",
-				             length, buffer->len);
+				             bytes_read, buffer->len);
 				return NULL;
 			}
-			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, buffer->buf, length);
+			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, buffer->buf, bytes_read);
 			if (!send_res) {
 				reading_generator_catch_exception(self);
 			}
 		}
 		nevents = PyList_Size(events);
 
-		if (length == 0) {
+		if (bytes_read == 0) {
 			break;
 		}
 	}
