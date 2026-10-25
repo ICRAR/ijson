@@ -144,7 +144,7 @@ def test_incomplete_fractions(adaptor, json):
     _raises_json_error(adaptor, json)
 
 
-@pytest.mark.parametrize("json", (b'+1', b'+0', b'[+01]', b'+.5', b'+1e5'))
+@pytest.mark.parametrize("json", (b'+1', b'+0', b'+01', b'+.5', b'+1e5'))
 def test_leading_plus_sign(adaptor, json):
     """numbers with a leading plus sign are invalid JSON"""
     _raises_json_error(adaptor, json)

@@ -222,7 +222,7 @@ def parse_value(target, multivalue, use_float):
                     raise common.JSONError('Invalid JSON number: %s' % (symbol,))
                 # JSON numbers can't start with a plus sign
                 if symbol[0] == '+':
-                    raise common.JSONError('Invalid JSON number: %s' % (symbol,))
+                    raise common.JSONError(f'Invalid JSON number: {symbol}')
                 # Fractions need a leading digit and must be followed by a digit
                 dot = symbol.find('.')
                 if dot != -1 and not (symbol[dot - 1:dot].isdigit() and symbol[dot + 1:dot + 2].isdigit()):
