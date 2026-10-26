@@ -12,8 +12,9 @@
   to ensure the underlying buffer stays of a fixed size.
 * Updated the bundled yajl so the `yajl2_c` backend no longer re-lexes a
   string that spans input chunks from its opening quote on every new chunk,
-  which made parsing a single long string quadratic in its length
-  (#194).
+  which made parsing a single long string quadratic in its length. This reaches 
+  the `yajl2_c` backend when isjon is built against the bundled yajl like the 
+  wheels. Builds against a system yajl keep the old behavior. (#194).
 
 ## [3.6.0]
 
