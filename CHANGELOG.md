@@ -13,7 +13,7 @@
 * Updated the bundled yajl so the `yajl2_c` backend no longer re-lexes a
   string that spans input chunks from its opening quote on every new chunk,
   which made parsing a single long string quadratic in its length
-  (rtobar/yajl#1).
+  (#194).
 
 ## [3.6.0]
 
