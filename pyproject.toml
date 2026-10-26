@@ -93,3 +93,9 @@ IJSON_EMBED_YAJL = "1"
 
 [tool.cibuildwheel.windows.environment]
 IJSON_EMBED_YAJL = "1"
+
+# Let riscv64 builds fall back to the RISE package index for binary
+# wheels that aren't on PyPI yet
+[[tool.cibuildwheel.overrides]]
+select = "*linux_riscv64"
+environment = { UV_EXTRA_INDEX_URL = "https://pypi.riseproject.dev/simple/", UV_INDEX_STRATEGY = "unsafe-best-match" }
