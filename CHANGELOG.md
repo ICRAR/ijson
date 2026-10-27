@@ -15,6 +15,9 @@
   which made parsing a single long string quadratic in its length. This reaches 
   the `yajl2_c` backend when ijson is built against the bundled yajl like the 
   wheels. Builds against a system yajl keep the old behavior. (#194).
+* The `python` backend no longer rescans a partially read string, number
+  or literal from its start every time a new chunk of input arrives,
+  which made parsing a single long lexeme quadratic in its length (#192).
 
 ## [3.6.0]
 
