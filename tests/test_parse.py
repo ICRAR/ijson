@@ -52,3 +52,16 @@ def test_parse_int_exceeding_max_str_digits(adaptor):
     json = b'[%s]' % (b'1' * (sys.get_int_max_str_digits() + 1))
     with pytest.raises(ValueError, match="integer string conversion"):
         adaptor.parse(json)
+
+
+@pytest.mark.parametrize("events, exc_type", [
+    ([('end_map', None)], IndexError),
+    ([('end_array', None)], IndexError),
+    ([('map_key', 'a')], IndexError),
+    ([('start_array', None), ('end_array', None), ('end_array', None)], IndexError),
+    ([('start_map', None), ('start_array', None)], TypeError),
+])
+def test_unbalanced_user_events(backend, events, exc_type):
+    """Malformed user-provided events raise instead of crashing yajl2_c"""
+    with pytest.raises(exc_type):
+        list(backend.parse(events))

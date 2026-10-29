@@ -50,6 +50,12 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 
 	// Calculate current prefix
 	PyObject *prefix;
+	if ((event == enames.end_array_ename || event == enames.end_map_ename ||
+	     event == enames.map_key_ename) && npaths < 2) {
+		// unbalanced user-provided events, path[0] is the root and stays
+		PyErr_Format(PyExc_IndexError, "%U event without an enclosing container", event);
+		return NULL;
+	}
 	if (event == enames.end_array_ename || event == enames.end_map_ename) {
 		// pop
 		N_M1(PyList_SetSlice(gen->path, npaths - 1, npaths, NULL));
@@ -85,6 +91,11 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 		// to_append = '.item' if path_stack[-1] else 'item'
 		// path_stack.append(path_stack[-1] + to_append)
 		PyObject *last_path = PyList_GET_ITEM(gen->path, npaths - 1);
+		if (!PyUnicode_Check(last_path)) {
+			// start_array right after start_map, without a map_key
+			PyErr_SetString(PyExc_TypeError, "start_array event in map without a preceding map_key");
+			return NULL;
+		}
 		if (PyUnicode_GET_LENGTH(last_path) > 0) {
 			PyObject *new_path = PyUnicode_Concat(last_path, dotitem);
 			N_N(new_path);
