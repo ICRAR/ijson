@@ -38,8 +38,14 @@ class IterReader:
     def read(self, n: int) -> bytes:
         if n == 0:
             return b""
-        chunk, self._warned = _to_bytes(next(self._iter, b""), self._warned)
-        return chunk
+        while True:
+            try:
+                chunk = next(self._iter)
+            except StopIteration:
+                return b""
+            chunk, self._warned = _to_bytes(chunk, self._warned)
+            if chunk:
+                return chunk
 
 
 class AiterReader:
@@ -52,12 +58,21 @@ class AiterReader:
     async def read(self, n: int) -> bytes:
         if n == 0:
             return b""
-        chunk, self._warned = _to_bytes(await anext(self._aiter, b""), self._warned)
-        return chunk
+        while True:
+            try:
+                chunk = await anext(self._aiter)
+            except StopAsyncIteration:
+                return b""
+            chunk, self._warned = _to_bytes(chunk, self._warned)
+            if chunk:
+                return chunk
 
 
 def from_iter(byte_iter):
-    """Convert a byte iterable (sync or async) to a file-like object."""
+    """Convert a byte iterable (sync or async) to a file-like object.
+
+    Empty chunks are skipped; only iterator exhaustion signals EOF.
+    """
     if hasattr(byte_iter, "__aiter__"):
         return AiterReader(aiter(byte_iter))
     return IterReader(iter(byte_iter))
