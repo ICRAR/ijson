@@ -26,8 +26,9 @@ static inline
 int add_event_and_value(void *ctx, PyObject *evt_name, PyObject *val) {
 	PyObject *target_send = ((yajl_parse_context *)ctx)->target_send;
 	if (ParseBasecoro_Check(target_send)) {
-		Z_N(parse_basecoro_send_impl(target_send, evt_name, val));
+		PyObject *res = parse_basecoro_send_impl(target_send, evt_name, val);
 		Py_DECREF(val);
+		Z_N(res);
 		return 1;
 	}
 	PyObject *tuple;
