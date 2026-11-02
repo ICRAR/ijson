@@ -24,6 +24,11 @@
   when the result  of `read()` method fails to be decoded as a utf8 byte sequence.
 * The `yajl2_c` backend now releases the result returned by the user-provided async `read()` method
   when parsing that buffer fails.
+* The `yajl2_c` backend correctly propagates exceptions raised by `items()`
+  and `kvitems()`. It used to keep parsing with the error pending, which
+  later surfaced as an unrelated `SystemError` or crashed the interpreter.
+* The `yajl2_c` backend no longer leaks the event value when an error is raised
+  while `parse()`, `items()` or `kvitems()` process it.
 
 ## [3.6.0]
 
