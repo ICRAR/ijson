@@ -1,6 +1,6 @@
 """Tests for the ijson.kvitems method"""
 
-from .test_base import ARRAY_JSON, EMPTY_MEMBER_TEST_CASES, JSON, JSON_KVITEMS, JSON_KVITEMS_META, JSON_OBJECT
+from .test_base import ARRAY_JSON, EMPTY_MEMBER_TEST_CASES, JSON, JSON_KVITEMS, JSON_KVITEMS_META, JSON_OBJECT, NoDuplicateKeysDict
 
 import sys
 
@@ -45,6 +45,12 @@ def test_kvitems_array(adaptor):
 ])
 def test_kvitems_empty_member(adaptor, test_case):
     assert test_case.kvitems == adaptor.kvitems(test_case.json, test_case.prefix)
+
+
+def test_map_type_error(adaptor):
+    """Errors raised by map_type propagate -- yajl2_c used to drop them and crash"""
+    with pytest.raises(ValueError, match="duplicate key"):
+        adaptor.kvitems(b'{"x": {"a": 1, "a": 2}, "y": {}}', '', map_type=NoDuplicateKeysDict)
 
 
 def test_coro_needs_input_with_three_elements(backend):

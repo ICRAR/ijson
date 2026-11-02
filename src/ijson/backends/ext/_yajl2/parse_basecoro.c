@@ -101,10 +101,10 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 	}
 
 	if (KVItemsBasecoro_Check(gen->target_send)) {
-		kvitems_basecoro_send_impl(gen->target_send, prefix, event, value);
+		N_N(kvitems_basecoro_send_impl(gen->target_send, prefix, event, value));
 	}
 	else if (ItemsBasecoro_Check(gen->target_send)) {
-		items_basecoro_send_impl(gen->target_send, prefix, event, value);
+		N_N(items_basecoro_send_impl(gen->target_send, prefix, event, value));
 	}
 	else {
 		PyObject *res;
