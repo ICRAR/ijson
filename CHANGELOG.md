@@ -10,6 +10,8 @@
   instead of reading past the end of that buffer (#187).
 * The `yajl2_c` backend provides a `memoryview` object to `readinto` objects
   to ensure the underlying buffer stays of a fixed size.
+  The buffer stays exported while it is parsed, so releasing that `memoryview`
+  raises an error instead of freeing the buffer before yajl reads it.
 * Updated the bundled yajl so the `yajl2_c` backend no longer re-lexes a
   string that spans input chunks from its opening quote on every new chunk,
   which made parsing a single long string quadratic in its length. This reaches
