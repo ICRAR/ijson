@@ -22,6 +22,8 @@
   even when it is not a bytes-like object.
 * The `python` backend correctly closes its internal generators
   when the result  of `read()` method fails to be decoded as a utf8 byte sequence.
+* The `yajl2_c` backend now releases the result returned by the user-provided async `read()` method
+  when parsing that buffer fails.
 
 ## [3.6.0]
 

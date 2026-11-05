@@ -187,11 +187,10 @@ static PyObject *async_reading_generator_next(PyObject *self)
 	gen->file_exhausted = (view.len == 0);
 	BasicParseBasecoro *basic_parse_basecoro = (BasicParseBasecoro *)gen->coro;
 	PyObject *res = ijson_yajl_parse(basic_parse_basecoro, view.buf, view.len);
-	N_N(res);
-	Py_DECREF(res);
-
 	PyBuffer_Release(&view);
 	Py_DECREF(buffer);
+	N_N(res);
+	Py_DECREF(res);
 
 	// values are returned via StopIteration exception values
 	if (maybe_pop_event(gen)) {

@@ -1,7 +1,11 @@
+import asyncio
+import contextlib
 import ijson
 import io
 
 import pytest
+
+from .support.async_ import AsyncReader
 
 
 def _memusage():
@@ -12,6 +16,11 @@ def _memusage():
 
 def _exhaust(it):
     sum(1 for _ in it)
+
+
+async def _async_exhaust(it):
+    async for _ in it:
+        pass
 
 
 def _repeat(n, f, *args, exhaust=False, **kwargs):
@@ -86,6 +95,25 @@ def test_erroneous_async_construction(backend, n ,invalid_construction):
         with pytest.raises(TypeError):
             invalid_construction(backend)
     _repeat(n, erroneous_async_construction)
+
+
+@pytest.mark.parametrize("n", (100000,))
+def test_async_gen_on_failed_basic_parse(backend, n):
+    """Tests that basic_parse_gen doesn't leak after a failure during parsing."""
+
+    def invalid_parsing(loop):
+        async def run():
+            # len(data) > buf_size forces a new slice to be created on each read(buf_size),
+            # hence making it easier to memory leak
+            buf_size = 100
+            data = b'x' * (buf_size + 1)
+            basic_parse_async = backend.basic_parse_async(AsyncReader(data), buf_size=buf_size)
+            with pytest.raises(Exception):
+                await _async_exhaust(basic_parse_async)
+        loop.run_until_complete(run())
+
+    with contextlib.closing(asyncio.new_event_loop()) as loop:
+        _repeat(n, invalid_parsing, loop)
 
 
 class _BadReader:
