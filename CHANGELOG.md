@@ -18,6 +18,8 @@
 * The `python` backend now rejects numbers with a leading `+` sign
   (e.g., `+1`) or with a fraction dot not surrounded by digits
   (e.g., `-.5`, `1.e5`), as the `yajl` backends already do.
+* The `yajl2_c` backend now releases the result returned by the user-provided `read()` method
+  even when it is not a bytes-like object.
 
 ## [3.6.0]
 

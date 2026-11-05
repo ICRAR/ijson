@@ -112,7 +112,10 @@ PyObject *reading_generator_next(reading_generator_t *self)
 			Py_buffer view;
 			PyObject *pbuffer = PyObject_CallFunctionObjArgs(self->read_func, self->buf_size, NULL);
 			N_N(pbuffer);
-			N_M1(PyObject_GetBuffer(pbuffer, &view, PyBUF_SIMPLE));
+			if (PyObject_GetBuffer(pbuffer, &view, PyBUF_SIMPLE) == -1) {
+				Py_DECREF(pbuffer);
+				return NULL;
+			}
 			bytes_read = view.len;
 			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, view.buf, view.len);
 			Py_DECREF(pbuffer);
