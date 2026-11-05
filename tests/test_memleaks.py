@@ -86,3 +86,25 @@ def test_erroneous_async_construction(backend, n ,invalid_construction):
         with pytest.raises(TypeError):
             invalid_construction(backend)
     _repeat(n, erroneous_async_construction)
+
+
+class _BadReader:
+    def _read(self, n):
+        if n == 0:
+            return b''
+        not_bytes_at_all = {1, 2, 3}
+        return not_bytes_at_all
+
+
+@pytest.mark.parametrize("n", (100000,))
+def test_reader_returning_objects_that_dont_expose_memory(backend, n):
+    """Checks for no memleaks when read() returns not bytes-like objects."""
+
+    class BadReader(_BadReader):
+        read = _BadReader._read
+
+    def use_bad_reader():
+        with pytest.raises(Exception):
+            _exhaust(backend.basic_parse_gen(BadReader()))
+
+    _repeat(n, use_bad_reader)
