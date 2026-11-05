@@ -41,6 +41,12 @@ def utf8_encoder(target):
             except:
                 pass
             raise common.IncompleteJSONError(e)
+        except:
+            try:
+                target.close()
+            except:
+                pass
+            raise
         if sdata:
             send(sdata)
         elif not bdata:

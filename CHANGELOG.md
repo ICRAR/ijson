@@ -20,6 +20,8 @@
   (e.g., `-.5`, `1.e5`), as the `yajl` backends already do.
 * The `yajl2_c` backend now releases the result returned by the user-provided `read()` method
   even when it is not a bytes-like object.
+* The `python` backend correctly closes its internal generators
+  when the result  of `read()` method fails to be decoded as a utf8 byte sequence.
 
 ## [3.6.0]
 
