@@ -60,7 +60,7 @@ deps = ["-r test-requirements.txt"]
 [tool.tox.env.memleaks]
 description = "Run memory leak tests"
 labels = ["memleaks"]
-commands = [["pytest", "--memleaks-only"]]
+commands = [["pytest", "-v", "--memleaks-only"]]
 
 [tool.tox.env.benchmark]
 description = "Run benchmark"
