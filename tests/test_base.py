@@ -279,6 +279,13 @@ PARTIAL_ARRAY_JSONS = [
     (b'[{"abc": [0, 1]},', {'abc': [0, 1]}),
 ]
 
+class NoDuplicateKeysDict(dict):
+    """A map_type that rejects duplicate keys"""
+    def __setitem__(self, key, value):
+        if key in self:
+            raise ValueError(f"duplicate key {key!r}")
+        super().__setitem__(key, value)
+
 items_test_case = collections.namedtuple('items_test_case', 'json, prefix, kvitems, items')
 EMPTY_MEMBER_TEST_CASES = {
     'simple': items_test_case(

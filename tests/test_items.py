@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from .test_base import ARRAY_JSON, ARRAY_JSON_OBJECT, EMPTY_MEMBER_TEST_CASES, JSON, JSON_OBJECT
+from .test_base import ARRAY_JSON, ARRAY_JSON_OBJECT, EMPTY_MEMBER_TEST_CASES, JSON, JSON_OBJECT, NoDuplicateKeysDict
 
 from ijson import JSONError
 
@@ -44,6 +44,12 @@ def test_map_type(adaptor):
     assert isinstance(obj, dict)
     obj = adaptor.items(JSON, '', map_type=collections.OrderedDict)[0]
     assert isinstance(obj, collections.OrderedDict)
+
+
+def test_map_type_error(adaptor):
+    """Errors raised by map_type propagate -- yajl2_c used to drop them and crash"""
+    with pytest.raises(ValueError, match="duplicate key"):
+        adaptor.items(b'[{"a": 1, "a": 2}, {}]', 'item', map_type=NoDuplicateKeysDict)
 
 
 @pytest.mark.parametrize("test_case", [
