@@ -174,9 +174,11 @@ static int _yajl2_mod_exec(PyObject *m)
 	M1_N(ijson_common);
 	state->JSONError = PyObject_GetAttrString(ijson_common, "JSONError");
 	state->IncompleteJSONError = PyObject_GetAttrString(ijson_common, "IncompleteJSONError");
+	state->MalformedEventsError = PyObject_GetAttrString(ijson_common, "MalformedEventsError");
 	Py_DECREF(ijson_common);
 	M1_N(state->JSONError);
 	M1_N(state->IncompleteJSONError);
+	M1_N(state->MalformedEventsError);
 
 	PyObject *decimal_module = PyImport_ImportModule("decimal");
 	M1_N(decimal_module);
@@ -197,6 +199,7 @@ void _yajl2_mod_free(void *self)
 		return;
 	}
 	Py_XDECREF(state->Decimal);
+	Py_XDECREF(state->MalformedEventsError);
 	Py_XDECREF(state->IncompleteJSONError);
 	Py_XDECREF(state->JSONError);
 	Py_XDECREF(state->dotitem);

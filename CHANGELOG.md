@@ -15,10 +15,13 @@
   which made parsing a single long string quadratic in its length. This reaches 
   the `yajl2_c` backend when ijson is built against the bundled yajl like the 
   wheels. Builds against a system yajl keep the old behavior. (#194).
-* The `yajl2_c` backend no longer crashes when `parse()` is given unbalanced
-  user-provided events (e.g. an `end_map` with no matching `start_map`,
-  or a `map_key` outside a map). It now raises `IndexError`/`TypeError`
-  like the `python` backend does, instead of reading past its path stack (#189).
+* Added `ijson.MalformedEventsError`, raised by all backends when `parse()`,
+  `items()` or `kvitems()` are given user-provided events that don't describe
+  a valid JSON document (e.g. an `end_map` with no matching `start_map`,
+  a value in a map without a preceding `map_key`, or an unknown event name).
+  Previously these either leaked `IndexError`/`TypeError`, silently produced
+  wrong prefixes, or crashed the `yajl2_c` backend by reading past its
+  path stack (#189).
 
 ## [3.6.0]
 

@@ -4,6 +4,8 @@ import sys
 
 import pytest
 
+from ijson import MalformedEventsError
+
 from .test_base import ARRAY_JSON, ARRAY_JSON_PARSE_EVENTS, JSON, JSON_PARSE_EVENTS
 
 def test_parse(adaptor):
@@ -54,14 +56,33 @@ def test_parse_int_exceeding_max_str_digits(adaptor):
         adaptor.parse(json)
 
 
-@pytest.mark.parametrize("events, exc_type", [
-    ([('end_map', None)], IndexError),
-    ([('end_array', None)], IndexError),
-    ([('map_key', 'a')], IndexError),
-    ([('start_array', None), ('end_array', None), ('end_array', None)], IndexError),
-    ([('start_map', None), ('start_array', None)], TypeError),
+def test_nested_user_events(backend):
+    """Well-formed nested user-provided events are accepted"""
+    json = b'{"a": [1, {"b": [[], {}]}, []], "c": {"d": {"e": null}}, "f": 2}'
+    events = list(backend.basic_parse(json))
+    assert list(backend.parse(json)) == list(backend.parse(events))
+
+
+@pytest.mark.parametrize("events", [
+    [('end_map', None)],
+    [('end_array', None)],
+    [('map_key', 'a')],
+    [('start_array', None), ('end_array', None), ('end_array', None)],
+    [('start_map', None), ('start_array', None)],
+    [('start_map', None), ('number', 0)],
+    [('start_map', None), ('map_key', 'a'), ('map_key', 'b')],
+    [('start_map', None), ('map_key', 'a'), ('end_map', None)],
+    [('start_map', None), ('map_key', 'a'), ('number', 0), ('number', 1)],
+    [('start_array', None), ('number', 0), ('end_map', None)],
+    [('start_array', None), ('start_array', None), ('end_map', None)],
+    [('start_array', None), ('start_map', None), ('end_array', None)],
+    [('start_map', None), ('map_key', 'a'), ('start_array', None), ('end_map', None)],
+    [('start_map', None), ('map_key', 'a'), ('start_map', None), ('end_map', None),
+     ('start_array', None)],
+    [('actually-not-an-event', 78)],
+    [('start_array', None), ('not-an-event', None)],
 ])
-def test_unbalanced_user_events(backend, events, exc_type):
-    """Malformed user-provided events raise instead of crashing yajl2_c"""
-    with pytest.raises(exc_type):
+def test_malformed_user_events(backend, events):
+    """Malformed user-provided events raise the expected exception."""
+    with pytest.raises(MalformedEventsError):
         list(backend.parse(events))

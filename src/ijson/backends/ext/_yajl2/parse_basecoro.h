@@ -23,6 +23,10 @@ typedef struct {
     PyObject_HEAD
     PyObject *target_send;
     PyObject *path;
+    /* one of the container_state values for each open container */
+    char *containers;
+    Py_ssize_t ncontainers;
+    Py_ssize_t containers_size;
     yajl2_state *module_state;
 } ParseBasecoro;
 

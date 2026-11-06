@@ -14,6 +14,21 @@
 #include "parse_basecoro.h"
 
 /*
+ * State of each open container, used to validate the incoming events
+ */
+enum container_state {
+	CONTAINER_ARRAY,
+	CONTAINER_MAP_KEY,   /* map expecting a map_key or end_map */
+	CONTAINER_MAP_VALUE  /* map expecting a value after a map_key */
+};
+
+static const char *container_names[] = {
+	"array",
+	"map expecting a key",
+	"map expecting a value"
+};
+
+/*
  * __init__, destructor, __iter__ and __next__
  */
 static int parse_basecoro_init(ParseBasecoro *self, PyObject *args, PyObject *kwargs)
@@ -22,6 +37,9 @@ static int parse_basecoro_init(ParseBasecoro *self, PyObject *args, PyObject *kw
 	Py_INCREF(self->target_send);
 	M1_N(self->path = PyList_New(0));
 	M1_N(self->module_state = get_state_from_imported_module());
+	self->containers = NULL;
+	self->ncontainers = 0;
+	self->containers_size = 0;
 
 	PyObject *empty;
 	M1_N(empty = PyUnicode_FromString(""));
@@ -34,9 +52,44 @@ static int parse_basecoro_init(ParseBasecoro *self, PyObject *args, PyObject *kw
 
 static void parse_basecoro_dealloc(ParseBasecoro *self)
 {
+	PyMem_Free(self->containers);
 	Py_XDECREF(self->path);
 	Py_XDECREF(self->target_send);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject *malformed_event(ParseBasecoro *gen, PyObject *event)
+{
+	const char *where = "top level";
+	if (gen->ncontainers > 0) {
+		where = container_names[(int)gen->containers[gen->ncontainers - 1]];
+	}
+	PyErr_Format(gen->module_state->MalformedEventsError,
+	             "unexpected %R event in %s", event, where);
+	return NULL;
+}
+
+static int push_container(ParseBasecoro *gen, enum container_state state)
+{
+	if (gen->ncontainers == gen->containers_size) {
+		Py_ssize_t new_size = gen->containers_size ? gen->containers_size * 2 : 16;
+		char *containers = PyMem_Realloc(gen->containers, new_size);
+		if (!containers) {
+			PyErr_NoMemory();
+			return -1;
+		}
+		gen->containers = containers;
+		gen->containers_size = new_size;
+	}
+	gen->containers[gen->ncontainers++] = (char)state;
+	return 0;
+}
+
+static inline int is_scalar_event(enames_t *enames, PyObject *event)
+{
+	return event == enames->null_ename || event == enames->boolean_ename ||
+	       event == enames->integer_ename || event == enames->double_ename ||
+	       event == enames->number_ename || event == enames->string_ename;
 }
 
 PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *value)
@@ -47,22 +100,15 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 	PyObject *dot = gen->module_state->dot;
 	PyObject *dotitem = gen->module_state->dotitem;
 	PyObject *item = gen->module_state->item;
+	char *container = gen->ncontainers > 0 ? &gen->containers[gen->ncontainers - 1] : NULL;
 
-	// Calculate current prefix
+	// Validate the event against the current container, and
+	// calculate current prefix
 	PyObject *prefix;
-	if ((event == enames.end_array_ename || event == enames.end_map_ename ||
-	     event == enames.map_key_ename) && npaths < 2) {
-		// unbalanced user-provided events, path[0] is the root and stays
-		PyErr_Format(PyExc_IndexError, "%U event without an enclosing container", event);
-		return NULL;
-	}
-	if (event == enames.end_array_ename || event == enames.end_map_ename) {
-		// pop
-		N_M1(PyList_SetSlice(gen->path, npaths - 1, npaths, NULL));
-		npaths--;
-		prefix = PyList_GET_ITEM(gen->path, npaths - 1);
-	}
-	else if (event == enames.map_key_ename) {
+	if (event == enames.map_key_ename) {
+		if (!container || *container != CONTAINER_MAP_KEY) {
+			return malformed_event(gen, event);
+		}
 
 		// last_path = path_stack[-2]
 		// to_append = '.' + value if len(path_stack) > 1 else value
@@ -75,40 +121,68 @@ PyObject* parse_basecoro_send_impl(PyObject *self, PyObject *event, PyObject *va
 			last_path = last_path_dot;
 		}
 		PyObject *new_path = PyUnicode_Concat(last_path, value);
-		N_N(new_path);
 		Py_XDECREF(last_path_dot);
+		N_N(new_path);
 		PyList_SetItem(gen->path, npaths - 1, new_path);
+		*container = CONTAINER_MAP_VALUE;
 
 		prefix = PyList_GET_ITEM(gen->path, npaths - 2);
 	}
-	else {
+	else if (event == enames.end_array_ename || event == enames.end_map_ename) {
+		char expected = event == enames.end_map_ename ? CONTAINER_MAP_KEY : CONTAINER_ARRAY;
+		if (!container || *container != expected) {
+			return malformed_event(gen, event);
+		}
+		// pop
+		N_M1(PyList_SetSlice(gen->path, npaths - 1, npaths, NULL));
+		npaths--;
+		gen->ncontainers--;
+		if (gen->ncontainers > 0 && gen->containers[gen->ncontainers - 1] == CONTAINER_MAP_VALUE) {
+			gen->containers[gen->ncontainers - 1] = CONTAINER_MAP_KEY;
+		}
 		prefix = PyList_GET_ITEM(gen->path, npaths - 1);
 	}
-
-	// If entering a map/array, append name to path
-	if (event == enames.start_array_ename) {
+	else if (container && *container == CONTAINER_MAP_KEY) {
+		// anything else needs a preceding map_key
+		return malformed_event(gen, event);
+	}
+	else if (event == enames.start_array_ename) {
+		prefix = PyList_GET_ITEM(gen->path, npaths - 1);
 
 		// to_append = '.item' if path_stack[-1] else 'item'
 		// path_stack.append(path_stack[-1] + to_append)
-		PyObject *last_path = PyList_GET_ITEM(gen->path, npaths - 1);
-		if (!PyUnicode_Check(last_path)) {
-			// start_array right after start_map, without a map_key
-			PyErr_SetString(PyExc_TypeError, "start_array event in map without a preceding map_key");
-			return NULL;
-		}
-		if (PyUnicode_GET_LENGTH(last_path) > 0) {
-			PyObject *new_path = PyUnicode_Concat(last_path, dotitem);
-			N_N(new_path);
-			N_M1(PyList_Append(gen->path, new_path));
-			Py_DECREF(new_path);
+		PyObject *new_path;
+		if (PyUnicode_GET_LENGTH(prefix) > 0) {
+			N_N(new_path = PyUnicode_Concat(prefix, dotitem));
 		}
 		else {
-			N_M1(PyList_Append(gen->path, item));
+			new_path = item;
+			Py_INCREF(new_path);
+		}
+		int res = PyList_Append(gen->path, new_path);
+		Py_DECREF(new_path);
+		N_M1(res);
+		if (push_container(gen, CONTAINER_ARRAY) == -1) {
+			PyList_SetSlice(gen->path, npaths, npaths + 1, NULL);
+			return NULL;
 		}
 	}
 	else if (event == enames.start_map_ename) {
-		Py_INCREF(Py_None);
+		prefix = PyList_GET_ITEM(gen->path, npaths - 1);
 		N_M1(PyList_Append(gen->path, Py_None));
+		if (push_container(gen, CONTAINER_MAP_KEY) == -1) {
+			PyList_SetSlice(gen->path, npaths, npaths + 1, NULL);
+			return NULL;
+		}
+	}
+	else if (is_scalar_event(&enames, event)) {
+		prefix = PyList_GET_ITEM(gen->path, npaths - 1);
+		if (container && *container == CONTAINER_MAP_VALUE) {
+			*container = CONTAINER_MAP_KEY;
+		}
+	}
+	else {
+		return malformed_event(gen, event);
 	}
 
 	if (KVItemsBasecoro_Check(gen->target_send)) {

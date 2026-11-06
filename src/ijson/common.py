@@ -23,6 +23,28 @@ class IncompleteJSONError(JSONError):
     pass
 
 
+class MalformedEventsError(JSONError):
+    '''
+    Raised when a sequence of user-provided events doesn't describe a valid
+    JSON document, e.g. an ``end_map`` without a matching ``start_map``.
+    '''
+    pass
+
+
+_SCALAR_EVENTS = frozenset(
+    ('null', 'boolean', 'integer', 'double', 'number', 'string'))
+
+# State of each open container in parse_basecoro
+_ARRAY = 'array'
+_MAP_KEY = 'map expecting a key'
+_MAP_VALUE = 'map expecting a value'
+
+
+def _malformed_event(event, containers):
+    where = containers[-1] if containers else 'top level'
+    return MalformedEventsError(f'unexpected {event!r} event in {where}')
+
+
 @utils.coroutine
 def parse_basecoro(target):
     '''
@@ -69,25 +91,42 @@ def parse_basecoro(target):
 
     '''
     path = []
+    # one of _ARRAY, _MAP_KEY or _MAP_VALUE for each open container
+    containers = []
     while True:
         event, value = yield
+        container = containers[-1] if containers else None
         if event == 'map_key':
+            if container != _MAP_KEY:
+                raise _malformed_event(event, containers)
             prefix = '.'.join(path[:-1])
             path[-1] = value
+            containers[-1] = _MAP_VALUE
+        elif event == 'end_map' or event == 'end_array':
+            if container != (_MAP_KEY if event == 'end_map' else _ARRAY):
+                raise _malformed_event(event, containers)
+            containers.pop()
+            path.pop()
+            prefix = '.'.join(path)
+            if containers and containers[-1] == _MAP_VALUE:
+                containers[-1] = _MAP_KEY
+        elif container == _MAP_KEY:
+            # anything else needs a preceding map_key
+            raise _malformed_event(event, containers)
         elif event == 'start_map':
             prefix = '.'.join(path)
             path.append(None)
-        elif event == 'end_map':
-            path.pop()
-            prefix = '.'.join(path)
+            containers.append(_MAP_KEY)
         elif event == 'start_array':
             prefix = '.'.join(path)
             path.append('item')
-        elif event == 'end_array':
-            path.pop()
+            containers.append(_ARRAY)
+        elif event in _SCALAR_EVENTS:
             prefix = '.'.join(path)
-        else: # any scalar value
-            prefix = '.'.join(path)
+            if container == _MAP_VALUE:
+                containers[-1] = _MAP_KEY
+        else:
+            raise _malformed_event(event, containers)
         target.send((prefix, event, value))
 
 

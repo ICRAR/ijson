@@ -28,6 +28,7 @@ typedef struct _yajl2_state {
 	PyObject *dotitem;
 	PyObject *JSONError;
 	PyObject *IncompleteJSONError;
+	PyObject *MalformedEventsError;
 	PyObject *Decimal;
 } yajl2_state;
 
