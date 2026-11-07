@@ -9,7 +9,7 @@
 Wrapper for _yajl2 C extension module
 '''
 
-from ijson import common, compat, utils
+from ijson import common, compat, utils, utils35
 from . import _yajl2
 
 
@@ -45,12 +45,20 @@ def parse_async(file, **kwargs):
 def kvitems_basecoro(target, prefix, map_type=None, **kwargs):
     return _yajl2.kvitems_basecoro(target.send, prefix, map_type, **kwargs)
 
-def kvitems_gen(file, prefix, map_type=None, **kwargs):
+def kvitems_gen(file, prefix, map_type=None, *, stop_after_first=False, **kwargs):
+    if stop_after_first:
+        return common._make_kvitems_gen(globals())(
+            file, prefix, map_type=map_type, stop_after_first=True, **kwargs
+        )
     f = compat.bytes_reader(file)
     buf_size = _get_buf_size(kwargs)
     return _yajl2.kvitems(f, buf_size, prefix, map_type, **kwargs)
 
-def kvitems_async(file, prefix, map_type=None, **kwargs):
+def kvitems_async(file, prefix, map_type=None, *, stop_after_first=False, **kwargs):
+    if stop_after_first:
+        return utils35._make_kvitems_async(globals())(
+            file, prefix, map_type=map_type, stop_after_first=True, **kwargs
+        )
     buf_size = _get_buf_size(kwargs)
     return _yajl2.kvitems_async(file, buf_size, prefix, map_type, **kwargs)
 

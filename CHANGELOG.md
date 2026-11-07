@@ -2,6 +2,9 @@
 
 ## Development
 
+* Added `stop_after_first` to `kvitems` and its synchronous, asynchronous,
+  and push variants. When enabled, parsing stops after the first complete
+  object matching the prefix, including an empty object (#62).
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).
