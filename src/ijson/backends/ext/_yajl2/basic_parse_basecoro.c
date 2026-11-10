@@ -35,9 +35,17 @@ int add_event_and_value(void *ctx, PyObject *evt_name, PyObject *val) {
 	Py_INCREF(evt_name); // this is an element of our module state's enames member
 	PyTuple_SET_ITEM(tuple, 0, evt_name);
 	PyTuple_SET_ITEM(tuple, 1, val);
-	CORO_SEND(target_send, tuple);
+	int result;
+	if (PyList_Check(target_send)) {
+		result = PyList_Append(target_send, tuple);
+	}
+	else {
+		PyObject *sent = PyObject_CallFunctionObjArgs(target_send, tuple, NULL);
+		result = sent ? 0 : -1;
+		Py_XDECREF(sent);
+	}
 	Py_DECREF(tuple);
-	return 1;
+	return result == 0;
 }
 
 static int null(void * ctx) {

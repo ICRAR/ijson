@@ -56,7 +56,7 @@ class async_iterable:
                 self.coro.send(data)
                 if self.events:
                     return self.events.popleft()
-            except StopIteration:
+            except (StopIteration, utils._StopParsing):
                 self.coro_finished = True
                 if self.events:
                     return self.events.popleft()
@@ -85,8 +85,9 @@ def _make_items_async(backend):
     return items_async
 
 def _make_kvitems_async(backend):
-    def kvitems_async(f, prefix, map_type=None, buf_size=64*1024, **config):
+    def kvitems_async(f, prefix, map_type=None, buf_size=64*1024,
+                      *, stop_after_first=False, **config):
         return async_iterable(f, buf_size,
-            *common._kvitems_pipeline(backend, prefix, map_type, config)
+            *common._kvitems_pipeline(backend, prefix, map_type, config, stop_after_first)
         )
     return kvitems_async
