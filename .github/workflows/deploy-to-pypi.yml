@@ -38,7 +38,7 @@ jobs:
           combinations = (
               ("ubuntu-24.04", "ARCHS_LINUX_INTEL"),
               ("ubuntu-24.04-arm", "ARCHS_LINUX_ARM"),
-              ("macos-14", "ARCHS_MACOS"),
+              ("macos-15", "ARCHS_MACOS"),
               ("windows-2025", "ARCHS_WINDOWS"),
               ("windows-11-arm", "ARCHS_WINDOWS_ARM"),
           )
