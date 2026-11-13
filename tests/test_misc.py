@@ -74,6 +74,61 @@ class TestMisc:
         with pytest.raises(ValueError, match=match):
             list(backend.basic_parse(GrowingReadinto(), buf_size=16))
 
+    def test_yajl2_c_readinto_releasing_buffer(self):
+        """Check that readinto() cannot free the buffer before it's parsed."""
+        try:
+            backend = ijson.get_backend("yajl2_c")
+        except ImportError:
+            pytest.skip("yajl2_c is not built")
+
+        class ReleasingReadinto:
+            def read(self, n):
+                return b''
+            def readinto(self, buf):
+                buf[:2] = b'[]'
+                buf.release()
+                return 2
+
+        with pytest.raises(ValueError, match="released memoryview"):
+            list(backend.basic_parse(ReleasingReadinto(), buf_size=16))
+
+    def test_yajl2_c_readinto_buffer_held_while_parsing(self):
+        """Check that the buffer cannot be released while yajl reads it."""
+        try:
+            backend = ijson.get_backend("yajl2_c")
+        except ImportError:
+            pytest.skip("yajl2_c is not built")
+        if platform.python_implementation() == "PyPy":
+            pytest.skip("PyPy allows releasing memoryviews with exported buffers")
+
+        doc = b'[{"a": 1}, "' + b'x' * 100 + b'"]'
+        released = []
+
+        class StashingReadinto:
+            view = None
+            def read(self, n):
+                return b''
+            def readinto(self, buf):
+                if StashingReadinto.view is not None:
+                    return 0
+                StashingReadinto.view = buf
+                buf[:len(doc)] = doc
+                return len(doc)
+
+        class ReleasingDict(dict):
+            def __init__(self):
+                super().__init__()
+                try:
+                    StashingReadinto.view.release()
+                    released.append(True)
+                except BufferError:
+                    released.append(False)
+
+        items = list(backend.items(StashingReadinto(), 'item',
+                                   map_type=ReleasingDict, buf_size=256))
+        assert released == [False]
+        assert items == [{"a": 1}, "x" * 100]
+
 
 class TestObjectBuilder:
     """Unit tests for the pure-python ObjectBuilder class"""
