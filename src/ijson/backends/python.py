@@ -8,7 +8,8 @@ from ijson import common, utils
 import codecs
 
 
-LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|\S')
+# Only skip the whitespace yajl skips; re's \s also matches Unicode spaces
+LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|[^ \t\n\v\f\r]')
 INTEGER_RE = re.compile(r'-?[0-9]+')
 UNARY_LEXEMES = set('[]{},')
 EOF = -1, None
