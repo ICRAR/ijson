@@ -32,6 +32,8 @@
 * The `python` backend now rejects Unicode whitespace such as `U+00A0`
   or `U+2028` between tokens, as the `yajl` backends already do.
   It used to skip anything Python's `re` module considers whitespace.
+  Vertical tab and form feed are still accepted: they aren't JSON whitespace
+  either, but `yajl` skips them, so all backends keep doing so for consistency.
 
 ## [3.6.0]
 

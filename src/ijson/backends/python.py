@@ -8,7 +8,10 @@ from ijson import common, utils
 import codecs
 
 
-# Only skip the whitespace yajl skips; re's \s also matches Unicode spaces
+# Only skip the whitespace yajl skips; re's \s also matches Unicode spaces.
+# \v and \f aren't JSON whitespace per RFC 8259 (and the json module rejects
+# them), but yajl skips them and system or dynamically loaded yajl builds
+# can't be fixed from here, so they stay to keep all backends consistent.
 LEXEME_RE = re.compile(r'[a-z0-9eE\.\+-]+|[^ \t\n\v\f\r]')
 INTEGER_RE = re.compile(r'-?[0-9]+')
 UNARY_LEXEMES = set('[]{},')
