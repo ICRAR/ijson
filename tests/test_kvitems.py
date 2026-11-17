@@ -82,6 +82,19 @@ def test_user_events(backend):
     assert [('a', 0)] == list(backend.kvitems(int_element_parse_events, ''))
 
 
+def test_user_events_member_without_value(backend):
+    """
+    A member whose value events were filtered out yields None -- yajl2_c used
+    to crash on it.
+    """
+    json = b'{"name": "x", "password": "secret", "id": 1}'
+    events = (
+        (path, event, value) for path, event, value in backend.parse(json)
+        if path != 'password'
+    )
+    assert [('name', 'x'), ('password', None), ('id', 1)] == list(backend.kvitems(events, ''))
+
+
 @pytest.mark.skipif(not hasattr(sys, "get_int_max_str_digits"),
                     reason="no int max str digits limit")
 def test_kvitems_int_exceeding_max_str_digits(adaptor):
