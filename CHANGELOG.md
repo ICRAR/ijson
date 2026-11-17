@@ -34,6 +34,9 @@
   It used to skip anything Python's `re` module considers whitespace.
   Vertical tab and form feed are still accepted: they aren't JSON whitespace
   either, but `yajl` skips them, so all backends keep doing so for consistency.
+* The `yajl2_c` backend's `kvitems()` no longer crashes when given events
+  where a member has no value (e.g., `parse()` events with a path filtered out),
+  and yields `None` as that member's value like the `python` backend.
 
 ## [3.6.0]
 
