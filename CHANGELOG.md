@@ -29,6 +29,9 @@
   later surfaced as an unrelated `SystemError` or crashed the interpreter.
 * The `yajl2_c` backend no longer leaks the event value when an error is raised
   while `parse()`, `items()` or `kvitems()` process it.
+* The `yajl2_c` backend's `kvitems()` no longer crashes when given events
+  where a member has no value (e.g., `parse()` events with a path filtered out),
+  and yields `None` as that member's value like the `python` backend.
 
 ## [3.6.0]
 

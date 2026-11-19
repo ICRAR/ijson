@@ -91,13 +91,15 @@ int builder_isactive(builder_t *builder)
  * Returns a new reference to the current value constructed by the builder.
  *
  * @param builder The builder
- * @return The value as currently constructed by this builder
+ * @return The value as currently constructed by this builder, or None if no
+ *  value has been built yet (like ObjectBuilder.value)
  */
 static inline
 PyObject *builder_value(builder_t *builder)
 {
-	Py_INCREF(builder->value);
-	return builder->value;
+	PyObject *value = builder->value ? builder->value : Py_None;
+	Py_INCREF(value);
+	return value;
 }
 
 /**
