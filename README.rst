@@ -457,6 +457,44 @@ When using the ``ijson.items`` function,
 the prefix works as the selection
 for which objects should be automatically built and returned by ijson.
 
+Tuple paths and array positions
+-------------------------------
+
+Use ``parse(..., tuple_paths=True)`` to receive tuples instead of dotted
+strings. The root prefix is ``()`` and keys are preserved verbatim, so
+``('a.b',)`` differs from ``('a', 'b')`` and ``('',)`` is an empty object key.
+Arrays still use the ``'item'`` component by default.
+
+``items`` and ``kvitems`` accept a tuple, list or other iterable of components
+and select tuple mode automatically:
+
+.. code-block:: python
+
+    data = b'{"a.b": [{"value": 1}, {"value": 2}]}'
+    list(ijson.items(data, ('a.b', 'item', 'value')))  # [1, 2]
+    list(ijson.items(data, ('a.b', 1, 'value')))       # [2]
+    list(ijson.kvitems(data, ('a.b', 0)))             # [('value', 1)]
+
+Non-negative integer components select zero-based array positions. String
+components, including numeric strings, select object keys; ``'item'`` retains
+its array wildcard meaning and can be mixed with explicit indices. Booleans,
+negative indices and other component types are rejected. Negative indices
+would require retaining an array until its end and are not supported.
+
+To include positions in emitted events, use
+``parse(..., tuple_paths=True, array_indices=True)``. Scalars and whole
+containers each occupy one position; nested arrays have independent counters.
+Without tuple mode, ``array_indices=True`` emits dotted numeric components.
+For selectors, explicitly enabling ``array_indices=True`` on a string prefix
+interprets its decimal components as indices (for example ``'rows.0.name'``).
+The default string-prefix API keeps its existing meaning and output.
+
+These options work with synchronous, asynchronous file and push APIs on all
+backends. When intercepting events, configure the producing ``parse`` call
+with the corresponding path options. On ``yajl2_c``, the opt-in path modes
+use Python path handling and object building over native YAJL parsing; the
+default string mode retains the fully native path.
+
 
 Backends
 ========
