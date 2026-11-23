@@ -463,7 +463,8 @@ Tuple paths and array positions
 Use ``parse(..., tuple_paths=True)`` to receive tuples instead of dotted
 strings. The root prefix is ``()`` and keys are preserved verbatim, so
 ``('a.b',)`` differs from ``('a', 'b')`` and ``('',)`` is an empty object key.
-Arrays still use the ``'item'`` component by default.
+Array elements use ``Ellipsis`` (written ``...``), so they are distinct from
+an object key literally named ``'item'``.
 
 ``items`` and ``kvitems`` accept a tuple, list or other iterable of components
 and select tuple mode automatically:
@@ -471,13 +472,13 @@ and select tuple mode automatically:
 .. code-block:: python
 
     data = b'{"a.b": [{"value": 1}, {"value": 2}]}'
-    list(ijson.items(data, ('a.b', 'item', 'value')))  # [1, 2]
-    list(ijson.items(data, ('a.b', 1, 'value')))       # [2]
-    list(ijson.kvitems(data, ('a.b', 0)))             # [('value', 1)]
+    list(ijson.items(data, ('a.b', ..., 'value')))  # [1, 2]
+    list(ijson.items(data, ('a.b', 1, 'value')))    # [2]
+    list(ijson.kvitems(data, ('a.b', 0)))          # [('value', 1)]
 
 Non-negative integer components select zero-based array positions. String
-components, including numeric strings, select object keys; ``'item'`` retains
-its array wildcard meaning and can be mixed with explicit indices. Booleans,
+components, including numeric strings and ``'item'``, select literal object keys;
+``...`` selects any array position and can be mixed with explicit indices. Booleans,
 negative indices and other component types are rejected. Negative indices
 would require retaining an array until its end and are not supported.
 
@@ -487,11 +488,16 @@ containers each occupy one position; nested arrays have independent counters.
 Without tuple mode, ``array_indices=True`` emits dotted numeric components.
 For selectors, explicitly enabling ``array_indices=True`` on a string prefix
 interprets its decimal components as indices (for example ``'rows.0.name'``).
+String selectors retain the legacy meaning of ``item`` (matching both array
+elements and literal ``item`` keys), including when path options are enabled.
 The default string-prefix API keeps its existing meaning and output.
 
 These options work with synchronous, asynchronous file and push APIs on all
-backends. When intercepting events, configure the producing ``parse`` call
-with the corresponding path options. On ``yajl2_c``, the opt-in path modes
+backends. When intercepting events, use the same path options on the producing
+``parse`` call and the consuming ``items`` or ``kvitems`` call. Dotted event
+paths are accepted, but cannot recover distinctions lost by joining components:
+use tuple events and tuple selectors for keys containing dots, empty keys,
+numeric keys or literal ``item`` keys. On ``yajl2_c``, the opt-in path modes
 use Python path handling and object building over native YAJL parsing; the
 default string mode retains the fully native path.
 

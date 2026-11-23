@@ -88,7 +88,7 @@ def parse_basecoro(target, tuple_paths=False, array_indices=False):
             prefix = make_prefix(path)
         elif event == 'start_array':
             prefix = make_prefix(path)
-            path.append(0 if array_indices else 'item')
+            path.append(0 if array_indices else (Ellipsis if tuple_paths else 'item'))
         elif event == 'end_array':
             path.pop()
             prefix = make_prefix(path)
@@ -257,25 +257,38 @@ def _split_path_config(config):
     return path_config, config
 
 
+_LEGACY_ITEM = object()
+
+
 def _normalize_prefix(prefix):
     if isinstance(prefix, str):
         return prefix
     prefix = tuple(prefix)
     for component in prefix:
+        if component is Ellipsis or component is _LEGACY_ITEM:
+            continue
         if not isinstance(component, str) and type(component) is not int:
-            raise TypeError('Path components must be strings or non-negative integers')
+            raise TypeError('Path components must be strings, non-negative integers or Ellipsis')
         if type(component) is int and component < 0:
             raise ValueError('Array indices must be non-negative')
     return prefix
+
+
+def _string_path(path, array_indices, selector=False):
+    parts = path.split('.') if path else ()
+    return tuple(
+        _LEGACY_ITEM if selector and part == 'item' else
+        int(part) if array_indices and part.isdecimal() else
+        Ellipsis if not array_indices and part == 'item' else part
+        for part in parts
+    )
 
 
 def _prepare_prefix(prefix, config):
     path_config, config = _split_path_config(config)
     prefix = _normalize_prefix(prefix)
     if isinstance(prefix, str) and any(path_config.values()):
-        prefix = tuple(prefix.split('.')) if prefix else ()
-        if path_config['array_indices']:
-            prefix = tuple(int(part) if part.isdecimal() else part for part in prefix)
+        prefix = _string_path(prefix, path_config['array_indices'], selector=True)
     if isinstance(prefix, tuple):
         path_config['tuple_paths'] = True
         if any(type(component) is int for component in prefix):
@@ -288,8 +301,18 @@ def _prefix_matches(path, prefix):
         return True
     return (isinstance(path, tuple) and isinstance(prefix, tuple) and
             len(path) == len(prefix) and
-            all(wanted == actual or (wanted == 'item' and type(actual) is int)
+            all(wanted == actual or
+                (wanted is Ellipsis and type(actual) is int) or
+                (wanted is _LEGACY_ITEM and
+                 (actual == 'item' or actual is Ellipsis or type(actual) is int))
                 for actual, wanted in zip(path, prefix)))
+
+
+def _tuple_events(events, array_indices):
+    for path, event, value in events:
+        if isinstance(path, str):
+            path = _string_path(path, array_indices)
+        yield path, event, value
 
 
 def _parse_pipeline(backend, config):
@@ -470,7 +493,9 @@ def _make_items(backend):
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )
         elif is_iterable(source):
-            prefix, _, _ = _prepare_prefix(prefix, config)
+            prefix, path_config, _ = _prepare_prefix(prefix, config)
+            if path_config['tuple_paths']:
+                source = _tuple_events(source, path_config['array_indices'])
             return utils.coros2gen(source,
                 (backend['items_basecoro'], (prefix,), {'map_type': map_type})
             )
@@ -490,7 +515,9 @@ def _make_kvitems(backend):
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )
         elif is_iterable(source):
-            prefix, _, _ = _prepare_prefix(prefix, config)
+            prefix, path_config, _ = _prepare_prefix(prefix, config)
+            if path_config['tuple_paths']:
+                source = _tuple_events(source, path_config['array_indices'])
             return utils.coros2gen(source,
                 (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type})
             )

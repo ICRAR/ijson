@@ -26,9 +26,9 @@ def test_tuple_items_and_kvitems(adaptor):
 
 def test_tuple_array_wildcards(adaptor):
     source = b'{"a.b":[{"x":1},{"x":2}]}'
-    assert adaptor.items(source, ('a.b', 'item', 'x')) == [1, 2]
+    assert adaptor.items(source, ('a.b', ..., 'x')) == [1, 2]
     assert adaptor.parse(b'[0]', tuple_paths=True) == [
-        ((), 'start_array', None), (('item',), 'number', 0),
+        ((), 'start_array', None), ((...,), 'number', 0),
         ((), 'end_array', None),
     ]
 
@@ -58,8 +58,8 @@ def test_array_indices_count_scalars_and_complete_containers(adaptor):
 def test_select_array_positions_and_mixed_wildcards(adaptor):
     source = b'{"A":[{"B":[{"C":1},{"C":2}]},{"B":[{"C":3},{"C":4}]}]}'
     assert adaptor.items(source, ('A', 1, 'B', 0, 'C')) == [3]
-    assert adaptor.items(source, ('A', 'item', 'B', 1, 'C')) == [2, 4]
-    assert adaptor.items(source, ('A', 0, 'B', 'item', 'C')) == [1, 2]
+    assert adaptor.items(source, ('A', ..., 'B', 1, 'C')) == [2, 4]
+    assert adaptor.items(source, ('A', 0, 'B', ..., 'C')) == [1, 2]
     assert adaptor.items(source, ('A', 20)) == []
     assert adaptor.kvitems(source, ('A', 1, 'B', 0)) == [('C', 3)]
 
@@ -69,7 +69,25 @@ def test_numeric_keys_are_distinct_from_indices(adaptor):
     assert adaptor.items(source, ('0', '0')) == [7]
     assert adaptor.items(source, ('a', 0)) == [8]
     assert adaptor.items(source, ('a', '0')) == []
-    assert adaptor.items(b'[1]', ('item',)) == [1]
+    assert adaptor.items(b'[1]', (...,)) == [1]
+
+
+@pytest.mark.parametrize('array_indices', [False, True])
+def test_literal_item_keys_and_array_wildcards_are_distinct(adaptor, array_indices):
+    source = b'{"rows":[{"child":[{"value":1}]},{"child":{"item":{"value":99}}}]}'
+    options = {'array_indices': array_indices}
+    assert adaptor.items(source, ('rows', ..., 'child', ..., 'value'), **options) == [1]
+    assert adaptor.items(source, ('rows', ..., 'child', 'item', 'value'), **options) == [99]
+    assert adaptor.kvitems(source, ('rows', ..., 'child', ...), **options) == [('value', 1)]
+    assert adaptor.kvitems(source, ('rows', ..., 'child', 'item'), **options) == [('value', 99)]
+    assert adaptor.items(b'{"item":42}', ('item',), **options) == [42]
+    assert adaptor.items(b'{"item":42}', (...,), **options) == []
+
+
+@pytest.mark.parametrize('options', [{}, {'tuple_paths': True}, {'array_indices': True}])
+def test_string_item_selectors_keep_legacy_meaning(adaptor, options):
+    source = b'{"rows":[{"x":[1]},{"x":{"item":99}}]}'
+    assert adaptor.items(source, 'rows.item.x.item', **options) == [1, 99]
 
 
 def test_explicit_string_index_mode(adaptor):
@@ -108,6 +126,30 @@ def test_options_work_with_intercepted_sync_events(backend):
     assert list(backend.items(parsed, ('a.b', 1))) == [2]
     parsed = backend.parse(b'{"a":{"x":1}}', tuple_paths=True)
     assert list(backend.kvitems(parsed, ('a',))) == [('x', 1)]
+
+
+@pytest.mark.parametrize('tuple_paths', [False, True])
+def test_string_index_selectors_match_intercepted_paths(backend, tuple_paths):
+    source = b'{"rows":[{"x":1},{"x":2}]}'
+    options = {'array_indices': True, 'tuple_paths': tuple_paths}
+    parsed = backend.parse(source, **options)
+    assert list(backend.items(parsed, 'rows.1.x', **options)) == [2]
+    parsed = backend.parse(source, **options)
+    assert list(backend.kvitems(parsed, 'rows.1', **options)) == [('x', 2)]
+    parsed = backend.parse(source, **options)
+    assert list(backend.items(parsed, 'rows.item.x', **options)) == [1, 2]
+    parsed = backend.parse(b'42', **options)
+    assert list(backend.items(parsed, '', **options)) == [42]
+
+
+@pytest.mark.parametrize('array_indices', [False, True])
+def test_typed_wildcards_match_intercepted_tuple_paths(backend, array_indices):
+    source = b'{"rows":[{"x":[1]},{"x":{"item":99}}]}'
+    options = {'tuple_paths': True, 'array_indices': array_indices}
+    parsed = backend.parse(source, **options)
+    assert list(backend.items(parsed, ('rows', ..., 'x', ...), **options)) == [1]
+    parsed = backend.parse(source, **options)
+    assert list(backend.items(parsed, ('rows', ..., 'x', 'item'), **options)) == [99]
 
 
 @pytest.mark.pull_only
