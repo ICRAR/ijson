@@ -322,6 +322,11 @@ def is_iterable(x):
     return hasattr(x, '__iter__')
 
 
+def is_async_event_source(x):
+    """True for async event iterables; file-like readers retain precedence."""
+    return hasattr(x, '__aiter__') and not callable(getattr(x, 'read', None))
+
+
 def _get_source(source):
     if isinstance(source, bytes):
         return io.BytesIO(source)
@@ -384,7 +389,7 @@ def _make_basic_parse(backend):
 def _make_parse(backend):
     def parse(source, buf_size=64*1024, **config):
         source = _get_source(source)
-        if is_async_file(source):
+        if is_async_file(source) or is_async_event_source(source):
             return backend['parse_async'](
                 source, buf_size=buf_size, **config
             )
@@ -403,7 +408,7 @@ def _make_parse(backend):
 def _make_items(backend):
     def items(source, prefix, map_type=None, buf_size=64*1024, **config):
         source = _get_source(source)
-        if is_async_file(source):
+        if is_async_file(source) or is_async_event_source(source):
             return backend['items_async'](
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )
@@ -422,7 +427,7 @@ def _make_items(backend):
 def _make_kvitems(backend):
     def kvitems(source, prefix, map_type=None, buf_size=64*1024, **config):
         source = _get_source(source)
-        if is_async_file(source):
+        if is_async_file(source) or is_async_event_source(source):
             return backend['kvitems_async'](
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )

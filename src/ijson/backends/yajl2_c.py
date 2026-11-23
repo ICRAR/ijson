@@ -9,7 +9,7 @@
 Wrapper for _yajl2 C extension module
 '''
 
-from ijson import common, compat, utils
+from ijson import common, compat, utils, utils35
 from . import _yajl2
 
 
@@ -38,6 +38,8 @@ def parse_gen(file, **kwargs):
     return _yajl2.parse(f, buf_size, **kwargs)
 
 def parse_async(file, **kwargs):
+    if common.is_async_event_source(file):
+        return utils35.coros2gen(file, (parse_basecoro, (), {}))
     buf_size = _get_buf_size(kwargs)
     return _yajl2.parse_async(file, buf_size, **kwargs)
 
@@ -51,6 +53,10 @@ def kvitems_gen(file, prefix, map_type=None, **kwargs):
     return _yajl2.kvitems(f, buf_size, prefix, map_type, **kwargs)
 
 def kvitems_async(file, prefix, map_type=None, **kwargs):
+    if common.is_async_event_source(file):
+        return utils35.coros2gen(file,
+            (kvitems_basecoro, (prefix,), {'map_type': map_type})
+        )
     buf_size = _get_buf_size(kwargs)
     return _yajl2.kvitems_async(file, buf_size, prefix, map_type, **kwargs)
 
@@ -64,6 +70,10 @@ def items_gen(file, prefix, map_type=None, **kwargs):
     return _yajl2.items(f, buf_size, prefix, map_type, **kwargs)
 
 def items_async(file, prefix, map_type=None, **kwargs):
+    if common.is_async_event_source(file):
+        return utils35.coros2gen(file,
+            (items_basecoro, (prefix,), {'map_type': map_type})
+        )
     buf_size = _get_buf_size(kwargs)
     return _yajl2.items_async(file, buf_size, prefix, map_type, **kwargs)
 

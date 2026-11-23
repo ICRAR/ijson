@@ -38,20 +38,20 @@ class async_iterable:
         self.coro_finished = False
         self.f = f
         self.buf_size = buf_size
-        self.read = None
+        self._read = None
 
     def __aiter__(self):
         return self
 
     async def __anext__(self):
-        if not self.read:
-            self.read = await _get_read(self.f)
+        if not self._read:
+            self._read = await _get_read(self.f)
         if self.events:
             return self.events.popleft()
         if self.coro_finished:
             raise StopAsyncIteration
         while True:
-            data = await self.read(self.buf_size)
+            data = await self._read(self.buf_size)
             try:
                 self.coro.send(data)
                 if self.events:
@@ -63,6 +63,32 @@ class async_iterable:
                 raise StopAsyncIteration
 
 
+async def coros2gen(source, *coro_pipeline):
+    """Adapt an async event source to a coroutine pipeline, one event at a time.
+
+    The pipeline is owned by this iterator; the supplied source remains owned
+    by the caller, who may resume it after closing this iterator.
+    """
+    events = sendable_deque()
+    coro = utils.chain(events, *coro_pipeline)
+    try:
+        async for value in source:
+            try:
+                coro.send(value)
+            except Exception as error:
+                while events:
+                    yield events.popleft()
+                if isinstance(error, StopIteration):
+                    return
+                raise
+            while events:
+                yield events.popleft()
+    finally:
+        close = getattr(coro, 'close', None)
+        if close is not None:
+            close()
+
+
 def _make_basic_parse_async(backend):
     def basic_parse_async(f, buf_size=64*1024, **config):
         return async_iterable(f, buf_size,
@@ -72,6 +98,8 @@ def _make_basic_parse_async(backend):
 
 def _make_parse_async(backend):
     def parse_async(f, buf_size=64*1024, **config):
+        if common.is_async_event_source(f):
+            return coros2gen(f, (backend['parse_basecoro'], (), {}))
         return async_iterable(f, buf_size,
             *common._parse_pipeline(backend, config)
         )
@@ -79,6 +107,10 @@ def _make_parse_async(backend):
 
 def _make_items_async(backend):
     def items_async(f, prefix, map_type=None, buf_size=64*1024, **config):
+        if common.is_async_event_source(f):
+            return coros2gen(f,
+                (backend['items_basecoro'], (prefix,), {'map_type': map_type})
+            )
         return async_iterable(f, buf_size,
             *common._items_pipeline(backend, prefix, map_type, config)
         )
@@ -86,6 +118,10 @@ def _make_items_async(backend):
 
 def _make_kvitems_async(backend):
     def kvitems_async(f, prefix, map_type=None, buf_size=64*1024, **config):
+        if common.is_async_event_source(f):
+            return coros2gen(f,
+                (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type})
+            )
         return async_iterable(f, buf_size,
             *common._kvitems_pipeline(backend, prefix, map_type, config)
         )

@@ -2,6 +2,9 @@
 
 ## Development
 
+* Added async event interception for `basic_parse -> parse`, `parse -> items`
+  and `parse -> kvitems`, including the explicit `*_async` APIs and `yajl2_c`.
+
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).

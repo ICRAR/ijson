@@ -248,8 +248,9 @@ In other words, something like this:
 
 An explicit set of ``*_async`` functions also exists
 offering the same functionality,
-except they will fail if anything other
-than a file-like asynchronous object is given to them.
+except they require an asynchronous source: a file-like object,
+or (for ``parse_async``, ``items_async`` and ``kvitems_async``)
+an async iterable of the preceding stage's events.
 (so the example above can also be written using ``ijson.items_async``).
 In fact in ijson version 3.0
 this was the only way to access
@@ -297,9 +298,23 @@ Note that this interception
 only makes sense for the ``basic_parse -> parse``,
 ``parse -> items`` and ``parse -> kvitems`` interactions.
 
-Note also that event interception
-is currently not supported
-by the ``async`` functions.
+The same chains work with async event iterables,
+including the explicit ``*_async`` functions and the default backend:
+
+.. code-block:: python
+
+  async def read_rows(async_file):
+      events = ijson.basic_parse_async(async_file)
+      parsed = ijson.parse_async(events)
+      async for row in ijson.items_async(parsed, 'rows.item'):
+          yield row
+
+An async generator can filter or modify events between these stages.
+Events are consumed on demand, and input or pipeline errors are propagated.
+Closing an event adapter releases its own coroutine pipeline;
+the caller remains responsible for the supplied event source.
+Objects with a ``read()`` method retain the file-like input behavior.
+For async iterables of raw byte chunks, use ``ijson.from_iter`` first.
 
 
 Push interfaces
