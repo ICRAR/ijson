@@ -32,6 +32,12 @@ def _repeat(n, f, *args, exhaust=False, **kwargs):
 
 @pytest.fixture(autouse=True)
 def _memory_leak_detection():
+    # TODO: this fixture doesn't measure the current RSS, but the maximum, so
+    # it isn't really measuring memory leaks.
+    #
+    # It has worked so far, but it relies on objects not accumulating for garbage
+    # collection, or at the very least that GC runs continuously so the max RSS
+    # doesn't run out of control.
     THRESHOLD = 0.1
     memusage_start = _memusage()
     yield
