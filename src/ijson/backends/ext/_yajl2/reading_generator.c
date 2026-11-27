@@ -133,15 +133,21 @@ PyObject *reading_generator_next(reading_generator_t *self)
 			if (bytes_read == -1 && PyErr_Occurred()) {
 				return NULL;
 			}
-			Py_buffer *buffer = PyMemoryView_GET_BUFFER(self->read_buffer_memview);
-			if (bytes_read < 0 || bytes_read > buffer->len) {
+			// Exporting the buffer fails if readinto() released the memoryview
+			// (which frees the bytearray behind it), and stops it from being
+			// released while yajl is still reading from it
+			Py_buffer view;
+			N_M1(PyObject_GetBuffer(self->read_buffer_memview, &view, PyBUF_SIMPLE));
+			if (bytes_read < 0 || bytes_read > view.len) {
 				PyErr_Format(PyExc_ValueError,
 				             "readinto() returned invalid length %zd "
 				             "(should have been between 0 and %zd)",
-				             bytes_read, buffer->len);
+				             bytes_read, view.len);
+				PyBuffer_Release(&view);
 				return NULL;
 			}
-			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, buffer->buf, bytes_read);
+			PyObject *send_res = ijson_yajl_parse(basic_parse_basecoro, view.buf, bytes_read);
+			PyBuffer_Release(&view);
 			if (!send_res) {
 				reading_generator_catch_exception(self);
 			}
