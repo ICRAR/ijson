@@ -42,6 +42,25 @@ class sendable_list(list):
     send = list.append
 
 
+class _StopParsing(Exception):
+    """Internal signal that the requested portion of the input is complete."""
+
+
+@coroutine
+def _stop_on_completion(coro):
+    """Translate intentional pipeline completion into coroutine exhaustion."""
+    try:
+        while True:
+            try:
+                value = yield
+            except GeneratorExit:
+                coro.close()
+                return
+            coro.send(value)
+    except (StopIteration, _StopParsing):
+        return
+
+
 def coros2gen(source, *coro_pipeline):
     '''
     A utility function that returns a generator yielding values dispatched by a
@@ -56,7 +75,7 @@ def coros2gen(source, *coro_pipeline):
             except Exception as ex:
                 for event in events:
                     yield event
-                if isinstance(ex, StopIteration):
+                if isinstance(ex, (StopIteration, _StopParsing)):
                     return
                 raise
             for event in events:

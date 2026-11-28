@@ -252,10 +252,39 @@ def _items_pipeline(backend, prefix, map_type, config):
     )
 
 
-def _kvitems_pipeline(backend, prefix, map_type, config):
-    return (
+@utils.coroutine
+def _stop_after_first_object(target, prefix):
+    """Forward events through the end of the first matching object."""
+    depth = 0
+    while True:
+        path, event, value = yield
+        target.send((path, event, value))
+        if depth:
+            if event in ('start_map', 'start_array'):
+                depth += 1
+            elif event in ('end_map', 'end_array'):
+                depth -= 1
+                if not depth:
+                    raise utils._StopParsing
+        elif path == prefix and event == 'start_map':
+            depth = 1
+
+
+def _kvitems_base_pipeline(backend, prefix, map_type, stop_after_first):
+    pipeline = (
         (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type}),
-        (backend['parse_basecoro'], [], {}),
+    )
+    if stop_after_first:
+        pipeline += ((_stop_after_first_object, (prefix,), {}),)
+    return pipeline
+
+
+def _kvitems_pipeline(backend, prefix, map_type, config, stop_after_first=False):
+    # The Python prefix coroutine propagates completion from the event filter;
+    # the backend still supplies its tokenizer and object builder.
+    parse = parse_basecoro if stop_after_first else backend['parse_basecoro']
+    return _kvitems_base_pipeline(backend, prefix, map_type, stop_after_first) + (
+        (parse, [], {}),
         (backend['basic_parse_basecoro'], [], config)
     )
 
@@ -288,11 +317,12 @@ def _make_items_coro(backend):
 
 
 def _make_kvitems_coro(backend):
-    def kvitems_coro(target, prefix, map_type=None, **config):
-        return utils.chain(
+    def kvitems_coro(target, prefix, map_type=None, *, stop_after_first=False, **config):
+        coro = utils.chain(
             target,
-            *_kvitems_pipeline(backend, prefix, map_type, config)
+            *_kvitems_pipeline(backend, prefix, map_type, config, stop_after_first)
         )
+        return utils._stop_on_completion(coro) if stop_after_first else coro
     return kvitems_coro
 
 
@@ -358,10 +388,11 @@ def _make_items_gen(backend):
 
 
 def _make_kvitems_gen(backend):
-    def kvitems_gen(file_obj, prefix, map_type=None, buf_size=64*1024, **config):
+    def kvitems_gen(file_obj, prefix, map_type=None, buf_size=64*1024,
+                    *, stop_after_first=False, **config):
         return utils.coros2gen(
             file_source(file_obj, buf_size=buf_size),
-            *_kvitems_pipeline(backend, prefix, map_type, config)
+            *_kvitems_pipeline(backend, prefix, map_type, config, stop_after_first)
         )
     return kvitems_gen
 
@@ -420,19 +451,22 @@ def _make_items(backend):
 
 
 def _make_kvitems(backend):
-    def kvitems(source, prefix, map_type=None, buf_size=64*1024, **config):
+    def kvitems(source, prefix, map_type=None, buf_size=64*1024,
+                *, stop_after_first=False, **config):
         source = _get_source(source)
         if is_async_file(source):
             return backend['kvitems_async'](
-                source, prefix, map_type=map_type, buf_size=buf_size, **config
+                source, prefix, map_type=map_type, buf_size=buf_size,
+                stop_after_first=stop_after_first, **config
             )
         elif is_file(source):
             return backend['kvitems_gen'](
-                source, prefix, map_type=map_type, buf_size=buf_size, **config
+                source, prefix, map_type=map_type, buf_size=buf_size,
+                stop_after_first=stop_after_first, **config
             )
         elif is_iterable(source):
             return utils.coros2gen(source,
-                (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type})
+                *_kvitems_base_pipeline(backend, prefix, map_type, stop_after_first)
             )
         raise ValueError("Unknown source type: %r" % type(source))
     return kvitems

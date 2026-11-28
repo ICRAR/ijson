@@ -415,6 +415,22 @@ to give users more fine-grained control over certain operations:
   have an optional ``map_type`` argument (defaults to ``dict``)
   used to construct objects from the JSON stream.
   This should be a dict-like type supporting item assignment.
+- The ``kvitems`` function and its variants accept ``stop_after_first``
+  (defaults to ``False``).
+  Set it to ``True`` to yield the key-value pairs from only the first
+  JSON object matching the prefix, then stop at the end of that object.
+  An empty first object also ends the iteration, without yielding any pairs.
+  For example, ``ijson.kvitems(b'[{"a": 1}, {"b": 2}]', 'item',
+  stop_after_first=True)`` yields only ``('a', 1)``.
+  The rest of the document is not parsed or validated.
+  Reading and UTF-8 decoding still operate on chunks, so the input stream
+  can have advanced beyond the end of the matching object.
+  When using ``kvitems_coro``, the ``send()`` call that completes the first
+  matching object raises ``StopIteration`` after sending its final pair
+  to the target. Stop feeding the coroutine at that point.
+  If no object matches, the entire input is processed as usual.
+  This option adds event-processing overhead, so its performance benefit
+  depends on how much input follows the first matching object.
 
 
 Events
