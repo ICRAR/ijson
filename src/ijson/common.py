@@ -24,7 +24,7 @@ class IncompleteJSONError(JSONError):
 
 
 @utils.coroutine
-def parse_basecoro(target):
+def parse_basecoro(target, tuple_paths=False, array_indices=False):
     '''
     A coroutine dispatching parsing events with the information about their
     location with the JSON object tree. Events are tuples
@@ -69,26 +69,37 @@ def parse_basecoro(target):
 
     '''
     path = []
+    if tuple_paths:
+        make_prefix = tuple
+    elif array_indices:
+        make_prefix = lambda path: '.'.join(map(str, path))
+    else:
+        make_prefix = '.'.join
     while True:
         event, value = yield
         if event == 'map_key':
-            prefix = '.'.join(path[:-1])
+            prefix = make_prefix(path[:-1])
             path[-1] = value
         elif event == 'start_map':
-            prefix = '.'.join(path)
+            prefix = make_prefix(path)
             path.append(None)
         elif event == 'end_map':
             path.pop()
-            prefix = '.'.join(path)
+            prefix = make_prefix(path)
         elif event == 'start_array':
-            prefix = '.'.join(path)
-            path.append('item')
+            prefix = make_prefix(path)
+            path.append(0 if array_indices else (Ellipsis if tuple_paths else 'item'))
         elif event == 'end_array':
             path.pop()
-            prefix = '.'.join(path)
+            prefix = make_prefix(path)
         else: # any scalar value
-            prefix = '.'.join(path)
+            prefix = make_prefix(path)
         target.send((prefix, event, value))
+        # A container occupies one array slot, just like a scalar. Advance
+        # only after that value has completed, keeping its end-event path.
+        if (array_indices and path and isinstance(path[-1], int) and
+                event not in ('map_key', 'start_map', 'start_array')):
+            path[-1] += 1
 
 
 class ObjectBuilder:
@@ -153,9 +164,10 @@ def items_basecoro(target, prefix, map_type=None):
     An couroutine dispatching native Python objects constructed from the events
     under a given prefix.
     '''
+    prefix = _normalize_prefix(prefix)
     while True:
         current, event, value = (yield)
-        if current == prefix:
+        if _prefix_matches(current, prefix):
             if event in ('start_map', 'start_array'):
                 object_depth = 1
                 builder = ObjectBuilder(map_type=map_type)
@@ -177,10 +189,11 @@ def kvitems_basecoro(target, prefix, map_type=None):
     An coroutine dispatching (key, value) pairs constructed from the events
     under a given prefix. The prefix should point to JSON objects
     '''
+    prefix = _normalize_prefix(prefix)
     builder = None
     while True:
         path, event, value = (yield)
-        while path == prefix and event == 'map_key':
+        while _prefix_matches(path, prefix) and event == 'map_key':
             object_depth = 0
             key = value
             builder = ObjectBuilder(map_type=map_type)
@@ -237,25 +250,93 @@ def _basic_parse_pipeline(backend, config):
     )
 
 
+def _split_path_config(config):
+    config = config.copy()
+    path_config = {name: config.pop(name, False)
+                   for name in ('tuple_paths', 'array_indices')}
+    return path_config, config
+
+
+_LEGACY_ITEM = object()
+
+
+def _normalize_prefix(prefix):
+    if isinstance(prefix, str):
+        return prefix
+    prefix = tuple(prefix)
+    for component in prefix:
+        if component is Ellipsis or component is _LEGACY_ITEM:
+            continue
+        if not isinstance(component, str) and type(component) is not int:
+            raise TypeError('Path components must be strings, non-negative integers or Ellipsis')
+        if type(component) is int and component < 0:
+            raise ValueError('Array indices must be non-negative')
+    return prefix
+
+
+def _string_path(path, array_indices, selector=False):
+    parts = path.split('.') if path else ()
+    return tuple(
+        _LEGACY_ITEM if selector and part == 'item' else
+        int(part) if array_indices and part.isdecimal() else
+        Ellipsis if not array_indices and part == 'item' else part
+        for part in parts
+    )
+
+
+def _prepare_prefix(prefix, config):
+    path_config, config = _split_path_config(config)
+    prefix = _normalize_prefix(prefix)
+    if isinstance(prefix, str) and any(path_config.values()):
+        prefix = _string_path(prefix, path_config['array_indices'], selector=True)
+    if isinstance(prefix, tuple):
+        path_config['tuple_paths'] = True
+        if any(type(component) is int for component in prefix):
+            path_config['array_indices'] = True
+    return prefix, path_config, config
+
+
+def _prefix_matches(path, prefix):
+    if path == prefix:
+        return True
+    return (isinstance(path, tuple) and isinstance(prefix, tuple) and
+            len(path) == len(prefix) and
+            all(wanted == actual or
+                (wanted is Ellipsis and type(actual) is int) or
+                (wanted is _LEGACY_ITEM and
+                 (actual == 'item' or actual is Ellipsis or type(actual) is int))
+                for actual, wanted in zip(path, prefix)))
+
+
+def _tuple_events(events, array_indices):
+    for path, event, value in events:
+        if isinstance(path, str):
+            path = _string_path(path, array_indices)
+        yield path, event, value
+
+
 def _parse_pipeline(backend, config):
+    path_config, config = _split_path_config(config)
     return (
-        (backend['parse_basecoro'], [], {}),
+        (backend['parse_basecoro'], [], path_config),
         (backend['basic_parse_basecoro'], [], config)
     )
 
 
 def _items_pipeline(backend, prefix, map_type, config):
+    prefix, path_config, config = _prepare_prefix(prefix, config)
     return (
         (backend['items_basecoro'], (prefix,), {'map_type': map_type}),
-        (backend['parse_basecoro'], [], {}),
+        (backend['parse_basecoro'], [], path_config),
         (backend['basic_parse_basecoro'], [], config)
     )
 
 
 def _kvitems_pipeline(backend, prefix, map_type, config):
+    prefix, path_config, config = _prepare_prefix(prefix, config)
     return (
         (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type}),
-        (backend['parse_basecoro'], [], {}),
+        (backend['parse_basecoro'], [], path_config),
         (backend['basic_parse_basecoro'], [], config)
     )
 
@@ -394,7 +475,7 @@ def _make_parse(backend):
             )
         elif is_iterable(source):
             return utils.coros2gen(source,
-                (backend['parse_basecoro'], (), {})
+                (backend['parse_basecoro'], (), _split_path_config(config)[0])
             )
         raise ValueError("Unknown source type: %r" % type(source))
     return parse
@@ -412,6 +493,9 @@ def _make_items(backend):
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )
         elif is_iterable(source):
+            prefix, path_config, _ = _prepare_prefix(prefix, config)
+            if path_config['tuple_paths']:
+                source = _tuple_events(source, path_config['array_indices'])
             return utils.coros2gen(source,
                 (backend['items_basecoro'], (prefix,), {'map_type': map_type})
             )
@@ -431,6 +515,9 @@ def _make_kvitems(backend):
                 source, prefix, map_type=map_type, buf_size=buf_size, **config
             )
         elif is_iterable(source):
+            prefix, path_config, _ = _prepare_prefix(prefix, config)
+            if path_config['tuple_paths']:
+                source = _tuple_events(source, path_config['array_indices'])
             return utils.coros2gen(source,
                 (backend['kvitems_basecoro'], (prefix,), {'map_type': map_type})
             )

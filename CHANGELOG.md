@@ -2,6 +2,11 @@
 
 ## Development
 
+* Added opt-in tuple paths and array positions to `parse`, and iterable
+  selectors with typed array indices to `items` and `kvitems`. Tuple paths
+  use `Ellipsis` for array wildcards, distinguishing literal `item` keys.
+  Existing dotted prefixes and `item` wildcards remain the default (#173, #107).
+
 * Fixed handling of integers longer than `sys.get_int_max_str_digits()`:
   the `yajl2_c` backend no longer crashes on them, and all backends
   now raise the `ValueError` produced by `int()` (#188).
