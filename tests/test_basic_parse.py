@@ -150,6 +150,12 @@ def test_leading_plus_sign(adaptor, json):
     _raises_json_error(adaptor, json)
 
 
+@pytest.mark.parametrize("json", ('[\N{FULLWIDTH DIGIT ONE}]', '\N{ARABIC-INDIC DIGIT THREE}', '[1,\N{DEVANAGARI DIGIT SEVEN}]'))
+def test_non_ascii_digits(adaptor, json):
+    """only ASCII digits form JSON numbers"""
+    _raises_json_error(adaptor, json.encode('utf-8'))
+
+
 @pytest.mark.parametrize("separator", ('\x1c', '\x1f', '\x85', '\xa0', '\N{LINE SEPARATOR}', '\N{IDEOGRAPHIC SPACE}'))
 def test_non_json_whitespace(adaptor, separator):
     """characters outside JSON's whitespace can't separate tokens"""
