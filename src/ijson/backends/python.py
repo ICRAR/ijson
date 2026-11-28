@@ -226,6 +226,10 @@ def parse_value(target, multivalue, use_float):
                     push(_PARSE_OBJECT_KEY)
             # A number
             else:
+                # JSON digits are ASCII only, but int() and float() accept any
+                # Unicode decimal digit
+                if not symbol.isascii():
+                    raise UnexpectedSymbol(symbol, pos)
                 # JSON numbers can't contain leading zeros
                 if ((len(symbol) > 1 and symbol[0] == '0' and symbol[1] not in ('e', 'E', '.')) or
                     (len(symbol) > 2 and symbol[0:2] == '-0' and symbol[2] not in ('e', 'E', '.'))):
